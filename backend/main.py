@@ -17,7 +17,7 @@ origins = [
     "http://127.0.0.1",
     "http://127.0.0.1:5500",
     "http://127.0.0.1:8000",
-    "https://anish280395.github.io"
+    "https://anish280395.github.io",
     "https://anish280395.github.io/sales-data-app",
 ]
 

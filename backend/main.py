@@ -104,7 +104,9 @@ FILE_DIR = "generated_files"
 os.makedirs(FILE_DIR, exist_ok=True)
 
 def load_product_data() -> pd.DataFrame:
-    return pd.read_csv("product_data.csv")
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    csv_path = os.path.join(base_dir, "..", "product_data.csv")
+    return pd.read_csv(csv_path)
 
 @app.get("/search")
 async def search_products(q: str = Query(..., min_length=1), current_user: dict = Depends(get_current_user)):

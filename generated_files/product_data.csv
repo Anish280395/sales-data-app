@@ -1,0 +1,5 @@
+material_number,material_description,material_group,base_uom,sales_uom,packing_unit,total_quantity,weight,weight_unit,volume,volume_unit,customs_tariff_number,country_of_origin,rohs,reach,manufacturer,manufacturer_part_number,shelf_life,storage_location,gross_weight,net_weight,batch_number,quality_inspection_status,price
+MAT001,Widget A,Electronics,pcs,box,Box,100,25.5,kg,0.1,m3,12345678,Germany,Yes,Yes,ABC Corp,ABC123,365,WH01,27.0,25.0,BATCH01,Pass,15.00
+MAT002,Widget B,Hardware,pcs,pcs,Carton,50,12.3,kg,0.05,m3,87654321,France,No,Yes,XYZ Inc,XYZ789,180,WH02,13.0,12.0,BATCH02,Pass,12.50
+MAT003,Gadget C,Electronics,pcs,pcs,Pallet,200,150,kg,0.5,m3,23456789,Italy,Yes,No,DEF Ltd,DEF456,730,WH03,155.0,150.0,BATCH03,Fail,50.00
+MAT004,Gadget D,Hardware,pcs,box,Box,75,18.0,kg,0.08,m3,34567890,Spain,Yes,Yes,GHI Corp,GHI012,365,WH04,20.0,18.0,BATCH04,Pass,20.00

@@ -25,6 +25,8 @@
   <p id="loginStatus" style="color:red;"></p>
 </div>
 
+<button id="logoutBtn" style="display:none;" onclick="logout()">Logout</button>
+
 <div id="searchSection" style="display:none;">
   <h2>Search Products</h2>
   <input id="searchInput" placeholder="Enter material number or description" />
@@ -44,6 +46,8 @@
 </div>
 
 <script>
+  const API_BASE_URL = "https://sales-data-app.onrender.com";
+
   let token = null;
   let selectedProduct = null;
 
@@ -59,7 +63,7 @@
     }
 
     try {
-      const res = await fetch('http://127.0.0.1:8000/token', {
+      const res = await fetch(`${API_BASE_URL}/token`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({ username, password })
@@ -73,12 +77,23 @@
       const data = await res.json();
       token = data.access_token;
 
-      // Hide login, show search
+      // Hide login, show search, show logout
       document.getElementById('loginSection').style.display = 'none';
       document.getElementById('searchSection').style.display = 'block';
+      document.getElementById('logoutBtn').style.display = 'inline-block';
     } catch (err) {
       loginStatus.textContent = "Login error: " + err.message;
     }
+  }
+
+  function logout() {
+    token = null;
+    selectedProduct = null;
+    document.getElementById('loginSection').style.display = 'block';
+    document.getElementById('searchSection').style.display = 'none';
+    document.getElementById('fieldsSection').style.display = 'none';
+    document.getElementById('downloadSection').style.display = 'none';
+    document.getElementById('logoutBtn').style.display = 'none';
   }
 
   async function searchProducts() {
@@ -94,7 +109,7 @@
     }
 
     try {
-      const res = await fetch(`http://127.0.0.1:8000/search?q=${encodeURIComponent(q)}`, {
+      const res = await fetch(`${API_BASE_URL}/search?q=${encodeURIComponent(q)}`, {
         headers: { Authorization: 'Bearer ' + token }
       });
       if (!res.ok) {
@@ -162,7 +177,7 @@
     };
 
     try {
-      const res = await fetch('http://127.0.0.1:8000/generate', {
+      const res = await fetch(`${API_BASE_URL}/generate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -179,7 +194,7 @@
       const data = await res.json();
       const downloadSection = document.getElementById('downloadSection');
       const downloadLink = document.getElementById('downloadLink');
-      downloadLink.href = "http://127.0.0.1:8000" + data.download_url;
+      downloadLink.href = `${API_BASE_URL}${data.download_url}`;
       downloadSection.style.display = 'block';
     } catch (err) {
       alert("Error: " + err.message);

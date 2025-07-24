@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
 import os
 import uuid
+from typing import List, Optional
 from passlib.context import CryptContext
 from jose import JWTError, jwt
 from datetime import datetime, timedelta
@@ -12,19 +13,18 @@ from datetime import datetime, timedelta
 app = FastAPI()
 origins = [
     "http://localhost",
-    "http://localhost:5500",      # common live-server port
+    "http://localhost:5500",
     "http://127.0.0.1",
     "http://127.0.0.1:5500",
-    "http://127.0.0.1:8000",     # backend itself
-    # Add your frontend URL if deployed somewhere else
+    "http://127.0.0.1:8000",
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,       # allowed origins
+    allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],         # allow all HTTP methods
-    allow_headers=["*"],         # allow all headers (Authorization, etc)
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 SECRET_KEY = "your_secret_key"
@@ -32,19 +32,19 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 fake_users_db = {
     "anish": {
         "username": "anish",
         "hashed_password": pwd_context.hash("anish123"),
-    }, 
+    },
     "Rohan": {
         "username": "Rohan001",
         "hashed_password": pwd_context.hash("Rohan123"),
     },
 }
+
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
 
@@ -58,7 +58,7 @@ def authenticate_user(username: str, password: str):
         return False
     return user
 
-def create_access_token(data: dict, expires_delta: timedelta | None = None):
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
     expire = datetime.utcnow() + (expires_delta or timedelta(minutes=15))
     to_encode.update({"exp": expire})
@@ -99,7 +99,6 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     return {"access_token": access_token, "token_type": "bearer"}
 
 
-# product Data and file generation
 FILE_DIR = "generated_files"
 os.makedirs(FILE_DIR, exist_ok=True)
 
@@ -108,33 +107,40 @@ def load_product_data() -> pd.DataFrame:
     csv_path = os.path.join(base_dir, "..", "product_data.csv")
     return pd.read_csv(csv_path)
 
+@app.get("/")
+async def root():
+    return {"message": "Welcome to Sales Data API. Use /token to login."}
+
 @app.get("/search")
 async def search_products(q: str = Query(..., min_length=1), current_user: dict = Depends(get_current_user)):
     df = load_product_data()
     filtered = df[
         df["material_number"].str.contains(q, case=False) |
         df["material_description"].str.contains(q, case=False)
-        
     ]
-    
     results = filtered.to_dict(orient="records")
     return {"results": results}
 
-@app.get("/generate")
-async def generate_excel(data: dict = Body(...), current_user: dict = Depends(get_current_user)):
+@app.post("/generate")
+async def generate_excel(
+    data: dict = Body(...),
+    current_user: dict = Depends(get_current_user)
+):
     material_number = data.get("material_number")
-    fields = data.get("fields", [])
+    fields: List[str] = data.get("fields", [])
     
     if not material_number or not fields:
         raise HTTPException(
-            status_code=400, detail="Material number and fields are required.")
+            status_code=400, detail="Material number and fields are required."
+        )
         
     df = load_product_data()
     filtered = df[df["material_number"] == material_number]
         
     if filtered.empty:
         raise HTTPException(
-            status_code=404, detail="Material number not found.")
+            status_code=404, detail="Material number not found."
+        )
         
     filtered = filtered[fields]
     
@@ -151,6 +157,3 @@ async def download_file(filename: str, current_user: dict = Depends(get_current_
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="File not found")
     return FileResponse(file_path, media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', filename=filename)
-
-
-FILE_DIR = "generated_files"

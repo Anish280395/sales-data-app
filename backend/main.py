@@ -126,25 +126,28 @@ async def search_products(q: str = Query(..., min_length=1), current_user: dict 
 @app.post("/generate")
 async def generate_excel(
     data: dict = Body(...),
-    current_user: dict = Depends(get_current_user)
-):
-    material_number = data.get("material_number")
+    current_user: dict = Depends(get_current_user)):
+    material_numbers: List[str] = data.get("material_numbers", [])
     fields: List[str] = data.get("fields", [])
     
-    if not material_number or not fields:
+    if not material_numbers or not fields:
         raise HTTPException(
-            status_code=400, detail="Material number and fields are required."
+            status_code=400, detail="Material numbers and fields are required."
         )
-        
+    
     df = load_product_data()
-    filtered = df[df["material_number"] == material_number]
-        
+    
+    # Filter dataframe by all requested material numbers
+    filtered = df[df["material_number"].isin(material_numbers)]
+    
     if filtered.empty:
         raise HTTPException(
-            status_code=404, detail="Material number not found."
+            status_code=404, detail="None of the material numbers found."
         )
-        
-    filtered = filtered[fields]
+    
+    # Select only the requested fields (make sure they exist in df)
+    valid_fields = [field for field in fields if field in df.columns]
+    filtered = filtered[valid_fields]
     
     file_id = str(uuid.uuid4())
     filename = f"product_data_{file_id}.xlsx"

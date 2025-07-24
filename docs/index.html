@@ -4,19 +4,78 @@
 <meta charset="UTF-8" />
 <title>Sales Data Export</title>
 <style>
-  body { font-family: Arial, sans-serif; max-width: 900px; margin: auto; padding: 20px; }
-  input, button { margin: 5px 0; padding: 8px; font-size: 1em; }
-  #searchSection, #fieldsSection, #downloadSection { margin-top: 20px; }
-  label { margin-right: 10px; }
-  table { border-collapse: collapse; width: 100%; margin-top: 10px; }
-  th, td { border: 1px solid #ddd; padding: 8px; }
-  th { background-color: #007bff; color: white; text-align: left; }
-  #logoutBtn { margin-bottom: 10px; }
+  body {
+    font-family: Arial, sans-serif;
+    max-width: 900px;
+    margin: auto;
+    padding: 20px;
+    background-color: #fff;
+    color: #222;
+    transition: background-color 0.3s, color 0.3s;
+  }
+  body.dark {
+    background-color: #121212;
+    color: #eee;
+  }
+  h1 {
+    color: #0066cc;
+  }
+  button, input {
+    margin: 5px 0;
+    padding: 8px;
+    font-size: 1em;
+  }
+  #logoutBtn {
+    margin-bottom: 20px;
+  }
+  #searchSection, #fieldsSection, #downloadSection {
+    margin-top: 20px;
+  }
+  label {
+    margin-right: 15px;
+  }
+  ul {
+    padding-left: 20px;
+  }
+  li {
+    cursor: pointer;
+    margin: 3px 0;
+  }
+  li:hover {
+    background: #eee;
+    color: #0066cc;
+  }
+  body.dark li:hover {
+    background: #333;
+    color: #3399ff;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+  }
+  th, td {
+    padding: 10px;
+    border: 1px solid #ddd;
+  }
+  th {
+    background-color: #0066cc;
+    color: white;
+  }
+  body.dark th {
+    background-color: #3399ff;
+  }
+  #toggleModeBtn {
+    margin-left: 10px;
+    cursor: pointer;
+  }
 </style>
 </head>
 <body>
 
-<h1>Sales Data Export</h1>
+<h1>Sales Data Export
+  <button id="toggleModeBtn" title="Toggle Dark/Light Mode">🌙</button>
+</h1>
 
 <div id="loginSection">
   <h2>Login</h2>
@@ -30,27 +89,29 @@
 
 <div id="searchSection" style="display:none;">
   <h2>Search Products</h2>
-  <input id="searchInput" placeholder="Enter material numbers or descriptions (comma separated)" style="width: 70%;" />
+  <input id="searchInput" placeholder="Enter material numbers (comma separated)" />
   <button onclick="searchProducts()">Search</button>
   <div id="searchResults"></div>
 </div>
 
 <div id="fieldsSection" style="display:none;">
   <h3>Filter Columns to Show</h3>
-  <div id="fieldsCheckboxes"></div>
-</div>
-
-<div id="tableSection" style="display:none;">
-  <h3>Product Details</h3>
-  <table id="productTable">
-    <thead><tr id="tableHeader"></tr></thead>
-    <tbody id="tableBody"></tbody>
-  </table>
+  <form id="fieldsForm"></form>
+  <button onclick="generateExcel()">Generate Excel</button>
 </div>
 
 <div id="downloadSection" style="display:none;">
   <h3>Download File</h3>
-  <a id="downloadLink" href="#" target="_blank" download>Download Excel File</a>
+  <a id="downloadLink" href="#" target="_blank">Download Excel File</a>
+</div>
+
+<div id="tableSection" style="display:none;">
+  <h3>Product Data</h3>
+  <input type="text" id="tableFilter" placeholder="Filter table..." oninput="filterTable()" />
+  <table id="productsTable">
+    <thead><tr id="tableHeader"></tr></thead>
+    <tbody id="tableBody"></tbody>
+  </table>
 </div>
 
 <script>
@@ -59,6 +120,11 @@
   let token = null;
   let products = [];
   let visibleFields = new Set();
+
+  document.getElementById('toggleModeBtn').onclick = () => {
+    document.body.classList.toggle('dark');
+    document.getElementById('toggleModeBtn').textContent = document.body.classList.contains('dark') ? '☀️' : '🌙';
+  };
 
   async function login() {
     const username = document.getElementById('username').value.trim();
@@ -101,96 +167,123 @@
     document.getElementById('loginSection').style.display = 'block';
     document.getElementById('searchSection').style.display = 'none';
     document.getElementById('fieldsSection').style.display = 'none';
-    document.getElementById('tableSection').style.display = 'none';
     document.getElementById('downloadSection').style.display = 'none';
+    document.getElementById('tableSection').style.display = 'none';
     document.getElementById('logoutBtn').style.display = 'none';
+    document.getElementById('searchInput').value = "";
+    document.getElementById('fieldsForm').innerHTML = "";
+    document.getElementById('searchResults').innerHTML = "";
   }
 
   async function searchProducts() {
-    const q = document.getElementById('searchInput').value.trim();
+    const input = document.getElementById('searchInput').value.trim();
     const resultsDiv = document.getElementById('searchResults');
     resultsDiv.innerHTML = "";
     document.getElementById('fieldsSection').style.display = 'none';
-    document.getElementById('tableSection').style.display = 'none';
     document.getElementById('downloadSection').style.display = 'none';
+    document.getElementById('tableSection').style.display = 'none';
 
-    if (!q) {
-      resultsDiv.textContent = "Enter a search term";
+    if (!input) {
+      resultsDiv.textContent = "Enter one or more material numbers separated by commas";
       return;
     }
 
+    const searchTerms = input.split(',').map(s => s.trim()).filter(s => s.length > 0);
+    if(searchTerms.length === 0) {
+      resultsDiv.textContent = "Enter valid material numbers";
+      return;
+    }
+
+    products = [];
+    visibleFields.clear();
+
     try {
-      const res = await fetch(`${API_BASE_URL}/search?q=${encodeURIComponent(q)}`, {
-        headers: { Authorization: 'Bearer ' + token }
-      });
-      if (!res.ok) {
-        resultsDiv.textContent = `Search error: ${res.status} ${res.statusText}`;
-        return;
+      for(const term of searchTerms) {
+        const res = await fetch(`${API_BASE_URL}/search?q=${encodeURIComponent(term)}`, {
+          headers: { Authorization: 'Bearer ' + token }
+        });
+        if (!res.ok) {
+          resultsDiv.textContent = `Search error: ${res.status} ${res.statusText}`;
+          return;
+        }
+        const data = await res.json();
+        products.push(...data.results);
       }
-      const data = await res.json();
-      if (data.results.length === 0) {
+
+      if (products.length === 0) {
         resultsDiv.textContent = "No products found";
         return;
       }
-      products = data.results;
+
       resultsDiv.textContent = `${products.length} product(s) found.`;
-      setupFieldFilters(products);
+
+      showFieldSelection(products[0]);
       renderTable(products);
       document.getElementById('fieldsSection').style.display = 'block';
       document.getElementById('tableSection').style.display = 'block';
+
     } catch (err) {
       resultsDiv.textContent = "Search error: " + err.message;
     }
   }
 
-  function setupFieldFilters(products) {
-    const fields = Object.keys(products[0]);
-    visibleFields = new Set(fields);
-    const container = document.getElementById('fieldsCheckboxes');
-    container.innerHTML = "";
-    fields.forEach(field => {
+  function showFieldSelection(product) {
+    const form = document.getElementById('fieldsForm');
+    form.innerHTML = "";
+    Object.keys(product).forEach(field => {
       const label = document.createElement('label');
       const checkbox = document.createElement('input');
       checkbox.type = 'checkbox';
-      checkbox.checked = true;
+      checkbox.name = 'fields';
       checkbox.value = field;
-      checkbox.onchange = () => {
-        if (checkbox.checked) {
-          visibleFields.add(field);
+      checkbox.checked = true;
+      visibleFields.add(field);
+      checkbox.onchange = (e) => {
+        if(e.target.checked) {
+          visibleFields.add(e.target.value);
         } else {
-          visibleFields.delete(field);
+          visibleFields.delete(e.target.value);
         }
         renderTable(products);
       };
       label.appendChild(checkbox);
-      label.appendChild(document.createTextNode(' ' + field));
-      container.appendChild(label);
-      container.appendChild(document.createElement('br'));
+      label.append(' ' + field);
+      form.appendChild(label);
+      form.appendChild(document.createElement('br'));
     });
   }
 
-  function renderTable(products) {
+  function renderTable(data) {
     const headerRow = document.getElementById('tableHeader');
     const tbody = document.getElementById('tableBody');
     headerRow.innerHTML = "";
     tbody.innerHTML = "";
 
-    // Render headers
+    // Table headers
     visibleFields.forEach(field => {
       const th = document.createElement('th');
       th.textContent = field;
       headerRow.appendChild(th);
     });
 
-    // Render rows
-    products.forEach(product => {
+    // Table rows
+    data.forEach(product => {
       const tr = document.createElement('tr');
       visibleFields.forEach(field => {
         const td = document.createElement('td');
-        td.textContent = product[field] ?? '';
+        td.textContent = product[field];
         tr.appendChild(td);
       });
       tbody.appendChild(tr);
+    });
+  }
+
+  function filterTable() {
+    const filter = document.getElementById('tableFilter').value.toLowerCase();
+    const tbody = document.getElementById('tableBody');
+    Array.from(tbody.rows).forEach(row => {
+      const text = row.textContent.toLowerCase();
+      row.style.display = text.includes(filter) ? '' : 'none';
     });
   }
 
@@ -200,26 +293,17 @@
       return;
     }
 
-    // Collect selected material numbers
-    const materialNumbers = products.map(p => p.material_number);
-    
-    // Collect fields to export
-    const fields = Array.from(visibleFields);
-
-    if (fields.length === 0) {
+    if (visibleFields.size === 0) {
       alert("Select at least one field");
       return;
     }
 
-    // For now, only allow single material number for generate API
-    if (materialNumbers.length > 1) {
-      alert("Excel export supports only single material number at a time. Please search with a single material number.");
-      return;
-    }
+    const material_numbers = [...new Set(products.map(p => p.material_number))];
+    const fields = Array.from(visibleFields);
 
     const payload = {
-      material_number: materialNumbers[0],
-      fields: fields
+      material_numbers,
+      fields
     };
 
     try {
@@ -247,8 +331,6 @@
     }
   }
 </script>
-
-<button onclick="generateExcel()">Generate Excel</button>
 
 </body>
 </html>

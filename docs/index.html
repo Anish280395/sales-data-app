@@ -2,150 +2,27 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Sales Data Export</title>
 <style>
-  body {
-    font-family: Arial, sans-serif;
-    max-width: 700px;
-    margin: auto;
-    padding: 20px;
-    background-color: white;
-    color: #222;
-    transition: background-color 0.3s, color 0.3s;
-  }
-  header, footer {
-    text-align: center;
-    padding: 1em 0;
-    background-color: #007BFF;
-    color: white;
-    border-radius: 6px;
-    margin-bottom: 1em;
-  }
-  input, button {
-    margin: 5px 0;
-    padding: 10px 12px;
-    font-size: 1em;
-    border-radius: 4px;
-    border: 1px solid #ccc;
-    width: 100%;
-    box-sizing: border-box;
-    transition: border-color 0.3s;
-  }
-  input:focus {
-    outline: none;
-    border-color: #007BFF;
-  }
-  button {
-    background-color: #007BFF;
-    color: white;
-    border: none;
-    cursor: pointer;
-    width: auto;
-  }
-  button:hover {
-    background-color: #0056b3;
-  }
-  button:disabled {
-    background-color: #999;
-    cursor: not-allowed;
-  }
-  #searchSection, #fieldsSection, #downloadSection {
-    margin-top: 20px;
-  }
-  label {
-    margin-right: 15px;
-    cursor: pointer;
-  }
-  ul {
-    padding-left: 20px;
-  }
-  li {
-    cursor: pointer;
-    margin: 5px 0;
-    padding: 5px 10px;
-    border-radius: 4px;
-  }
-  li:hover {
-    background: #f0f0f0;
-  }
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 12px;
-  }
-  th, td {
-    border: 1px solid #ddd;
-    padding: 8px;
-    text-align: left;
-  }
-  th {
-    background-color: #007BFF;
-    color: white;
-  }
-  .spinner {
-    border: 4px solid #f3f3f3;
-    border-top: 4px solid #007BFF;
-    border-radius: 50%;
-    width: 20px;
-    height: 20px;
-    animation: spin 1s linear infinite;
-    display: inline-block;
-    vertical-align: middle;
-    margin-left: 8px;
-  }
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-  #loginStatus, #searchResults, #fieldsSection, #downloadSection {
-    margin-top: 10px;
-  }
-  #logoutBtn {
-    margin-bottom: 20px;
-  }
-  #darkModeToggle {
-    position: fixed;
-    top: 15px;
-    right: 15px;
-    cursor: pointer;
-    background: #007BFF;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    padding: 8px 12px;
-  }
-  body.dark {
-    background-color: #121212;
-    color: #ddd;
-  }
-  body.dark header, body.dark footer {
-    background-color: #0a58ca;
-  }
-  body.dark input, body.dark select, body.dark textarea {
-    background-color: #222;
-    border-color: #555;
-    color: #ddd;
-  }
-  body.dark table, body.dark th, body.dark td {
-    border-color: #555;
-  }
+  body { font-family: Arial, sans-serif; max-width: 900px; margin: auto; padding: 20px; }
+  input, button { margin: 5px 0; padding: 8px; font-size: 1em; }
+  #searchSection, #fieldsSection, #downloadSection { margin-top: 20px; }
+  label { margin-right: 10px; }
+  table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+  th, td { border: 1px solid #ddd; padding: 8px; }
+  th { background-color: #007bff; color: white; text-align: left; }
+  #logoutBtn { margin-bottom: 10px; }
 </style>
 </head>
 <body>
 
-<header>
-  <h1>Sales Data Export</h1>
-</header>
-
-<button id="darkModeToggle" title="Toggle Dark Mode">🌙</button>
+<h1>Sales Data Export</h1>
 
 <div id="loginSection">
   <h2>Login</h2>
-  <input id="username" placeholder="Username" autocomplete="username" />
-  <input id="password" type="password" placeholder="Password" autocomplete="current-password" />
-  <button id="loginBtn" onclick="login()">Login</button>
-  <span id="loginSpinner" class="spinner" style="display:none;"></span>
+  <input id="username" placeholder="Username" /><br />
+  <input id="password" type="password" placeholder="Password" /><br />
+  <button onclick="login()">Login</button>
   <p id="loginStatus" style="color:red;"></p>
 </div>
 
@@ -153,77 +30,44 @@
 
 <div id="searchSection" style="display:none;">
   <h2>Search Products</h2>
-  <input id="searchInput" placeholder="Enter material number or description" />
-  <button id="searchBtn" onclick="searchProducts()">Search</button>
-  <span id="searchSpinner" class="spinner" style="display:none;"></span>
+  <input id="searchInput" placeholder="Enter material numbers or descriptions (comma separated)" style="width: 70%;" />
+  <button onclick="searchProducts()">Search</button>
   <div id="searchResults"></div>
 </div>
 
 <div id="fieldsSection" style="display:none;">
-  <h3>Select Fields to Export</h3>
-  <button onclick="toggleSelectAll()">Select/Deselect All</button>
-  <form id="fieldsForm" style="margin-top:10px;"></form>
-  <button id="generateBtn" onclick="generateExcel()">Generate Excel</button>
-  <span id="generateSpinner" class="spinner" style="display:none;"></span>
+  <h3>Filter Columns to Show</h3>
+  <div id="fieldsCheckboxes"></div>
+</div>
+
+<div id="tableSection" style="display:none;">
+  <h3>Product Details</h3>
+  <table id="productTable">
+    <thead><tr id="tableHeader"></tr></thead>
+    <tbody id="tableBody"></tbody>
+  </table>
 </div>
 
 <div id="downloadSection" style="display:none;">
   <h3>Download File</h3>
-  <a id="downloadLink" href="#" target="_blank" rel="noopener noreferrer">Download Excel File</a>
+  <a id="downloadLink" href="#" target="_blank" download>Download Excel File</a>
 </div>
-
-<footer>
-  <p>© 2025 Sales Data Export App</p>
-</footer>
 
 <script>
   const API_BASE_URL = "https://sales-data-app.onrender.com";
 
   let token = null;
-  let selectedProduct = null;
-  let allFieldsSelected = true;
-
-  window.onload = () => {
-    const savedToken = localStorage.getItem('salesDataToken');
-    if (savedToken) {
-      token = savedToken;
-      document.getElementById('loginSection').style.display = 'none';
-      document.getElementById('searchSection').style.display = 'block';
-      document.getElementById('logoutBtn').style.display = 'inline-block';
-    }
-    const darkMode = localStorage.getItem('darkMode');
-    if (darkMode === "enabled") {
-      document.body.classList.add('dark');
-      document.getElementById('darkModeToggle').textContent = '☀️';
-    }
-  };
-
-  document.getElementById('darkModeToggle').onclick = () => {
-    document.body.classList.toggle('dark');
-    if(document.body.classList.contains('dark')){
-      localStorage.setItem('darkMode', 'enabled');
-      document.getElementById('darkModeToggle').textContent = '☀️';
-    } else {
-      localStorage.setItem('darkMode', 'disabled');
-      document.getElementById('darkModeToggle').textContent = '🌙';
-    }
-  };
+  let products = [];
+  let visibleFields = new Set();
 
   async function login() {
-    const loginBtn = document.getElementById('loginBtn');
-    const spinner = document.getElementById('loginSpinner');
-    const loginStatus = document.getElementById('loginStatus');
-    loginStatus.textContent = "";
-    loginBtn.disabled = true;
-    spinner.style.display = 'inline-block';
-
     const username = document.getElementById('username').value.trim();
     const password = document.getElementById('password').value.trim();
+    const loginStatus = document.getElementById('loginStatus');
+    loginStatus.textContent = "";
 
     if (!username || !password) {
       loginStatus.textContent = "Please enter username and password";
-      loginBtn.disabled = false;
-      spinner.style.display = 'none';
       return;
     }
 
@@ -236,57 +80,44 @@
 
       if (!res.ok) {
         loginStatus.textContent = "Login failed: Invalid credentials";
-        loginBtn.disabled = false;
-        spinner.style.display = 'none';
         return;
       }
 
       const data = await res.json();
       token = data.access_token;
-      localStorage.setItem('salesDataToken', token);
 
       document.getElementById('loginSection').style.display = 'none';
       document.getElementById('searchSection').style.display = 'block';
       document.getElementById('logoutBtn').style.display = 'inline-block';
     } catch (err) {
       loginStatus.textContent = "Login error: " + err.message;
-    } finally {
-      loginBtn.disabled = false;
-      spinner.style.display = 'none';
     }
   }
 
   function logout() {
     token = null;
-    selectedProduct = null;
-    localStorage.removeItem('salesDataToken');
-
+    products = [];
+    visibleFields.clear();
     document.getElementById('loginSection').style.display = 'block';
     document.getElementById('searchSection').style.display = 'none';
     document.getElementById('fieldsSection').style.display = 'none';
+    document.getElementById('tableSection').style.display = 'none';
     document.getElementById('downloadSection').style.display = 'none';
     document.getElementById('logoutBtn').style.display = 'none';
-    document.getElementById('searchResults').innerHTML = '';
-    document.getElementById('fieldsForm').innerHTML = '';
   }
 
   async function searchProducts() {
-    const searchBtn = document.getElementById('searchBtn');
-    const spinner = document.getElementById('searchSpinner');
+    const q = document.getElementById('searchInput').value.trim();
     const resultsDiv = document.getElementById('searchResults');
-
     resultsDiv.innerHTML = "";
     document.getElementById('fieldsSection').style.display = 'none';
+    document.getElementById('tableSection').style.display = 'none';
     document.getElementById('downloadSection').style.display = 'none';
 
-    const q = document.getElementById('searchInput').value.trim();
     if (!q) {
       resultsDiv.textContent = "Enter a search term";
       return;
     }
-
-    searchBtn.disabled = true;
-    spinner.style.display = 'inline-block';
 
     try {
       const res = await fetch(`${API_BASE_URL}/search?q=${encodeURIComponent(q)}`, {
@@ -297,111 +128,98 @@
         return;
       }
       const data = await res.json();
-
       if (data.results.length === 0) {
         resultsDiv.textContent = "No products found";
         return;
       }
-
-      // Show number of results
-      const countEl = document.createElement('p');
-      countEl.textContent = `${data.results.length} product(s) found.`;
-      resultsDiv.appendChild(countEl);
-
-      // Build results list and table preview
-      const ul = document.createElement('ul');
-      data.results.forEach(product => {
-        const li = document.createElement('li');
-        li.textContent = `${product.material_number} - ${product.material_description}`;
-        li.onclick = () => selectProduct(product);
-        ul.appendChild(li);
-      });
-      resultsDiv.appendChild(ul);
+      products = data.results;
+      resultsDiv.textContent = `${products.length} product(s) found.`;
+      setupFieldFilters(products);
+      renderTable(products);
+      document.getElementById('fieldsSection').style.display = 'block';
+      document.getElementById('tableSection').style.display = 'block';
     } catch (err) {
       resultsDiv.textContent = "Search error: " + err.message;
-    } finally {
-      searchBtn.disabled = false;
-      spinner.style.display = 'none';
     }
   }
 
-  function selectProduct(product) {
-    selectedProduct = product;
-    document.getElementById('downloadSection').style.display = 'none';
-
-    const form = document.getElementById('fieldsForm');
-    form.innerHTML = "";
-
-    // Create a table for field preview values
-    const table = document.createElement('table');
-    const headerRow = document.createElement('tr');
-    const fieldHeader = document.createElement('th');
-    fieldHeader.textContent = "Field";
-    const valueHeader = document.createElement('th');
-    valueHeader.textContent = "Value";
-    headerRow.appendChild(fieldHeader);
-    headerRow.appendChild(valueHeader);
-    table.appendChild(headerRow);
-
-    Object.keys(product).forEach(field => {
-      // Checkbox
+  function setupFieldFilters(products) {
+    const fields = Object.keys(products[0]);
+    visibleFields = new Set(fields);
+    const container = document.getElementById('fieldsCheckboxes');
+    container.innerHTML = "";
+    fields.forEach(field => {
       const label = document.createElement('label');
       const checkbox = document.createElement('input');
       checkbox.type = 'checkbox';
-      checkbox.name = 'fields';
-      checkbox.value = field;
       checkbox.checked = true;
+      checkbox.value = field;
+      checkbox.onchange = () => {
+        if (checkbox.checked) {
+          visibleFields.add(field);
+        } else {
+          visibleFields.delete(field);
+        }
+        renderTable(products);
+      };
       label.appendChild(checkbox);
-      label.append(' ' + field);
-
-      form.appendChild(label);
-      form.appendChild(document.createElement('br'));
-
-      // Table row
-      const row = document.createElement('tr');
-      const fieldCell = document.createElement('td');
-      fieldCell.textContent = field;
-      const valueCell = document.createElement('td');
-      valueCell.textContent = product[field];
-      row.appendChild(fieldCell);
-      row.appendChild(valueCell);
-      table.appendChild(row);
+      label.appendChild(document.createTextNode(' ' + field));
+      container.appendChild(label);
+      container.appendChild(document.createElement('br'));
     });
-
-    form.appendChild(table);
-    document.getElementById('fieldsSection').style.display = 'block';
   }
 
-  function toggleSelectAll() {
-    allFieldsSelected = !allFieldsSelected;
-    const checkboxes = document.querySelectorAll('input[name="fields"]');
-    checkboxes.forEach(cb => cb.checked = allFieldsSelected);
+  function renderTable(products) {
+    const headerRow = document.getElementById('tableHeader');
+    const tbody = document.getElementById('tableBody');
+    headerRow.innerHTML = "";
+    tbody.innerHTML = "";
+
+    // Render headers
+    visibleFields.forEach(field => {
+      const th = document.createElement('th');
+      th.textContent = field;
+      headerRow.appendChild(th);
+    });
+
+    // Render rows
+    products.forEach(product => {
+      const tr = document.createElement('tr');
+      visibleFields.forEach(field => {
+        const td = document.createElement('td');
+        td.textContent = product[field] ?? '';
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
   }
 
   async function generateExcel() {
-    if (!selectedProduct) {
-      alert("Please select a product first");
+    if (products.length === 0) {
+      alert("Please search and select products first");
       return;
     }
 
-    const generateBtn = document.getElementById('generateBtn');
-    const spinner = document.getElementById('generateSpinner');
-    generateBtn.disabled = true;
-    spinner.style.display = 'inline-block';
+    // Collect selected material numbers
+    const materialNumbers = products.map(p => p.material_number);
+    
+    // Collect fields to export
+    const fields = Array.from(visibleFields);
 
-    const checkedFields = Array.from(document.querySelectorAll('input[name="fields"]:checked'))
-      .map(cb => cb.value);
-
-    if (checkedFields.length === 0) {
+    if (fields.length === 0) {
       alert("Select at least one field");
-      generateBtn.disabled = false;
-      spinner.style.display = 'none';
+      return;
+    }
+
+    // For now, only allow single material number for generate API
+    if (materialNumbers.length > 1) {
+      alert("Excel export supports only single material number at a time. Please search with a single material number.");
       return;
     }
 
     const payload = {
-      material_number: selectedProduct.material_number,
-      fields: checkedFields
+      material_number: materialNumbers[0],
+      fields: fields
     };
 
     try {
@@ -423,16 +241,14 @@
       const downloadSection = document.getElementById('downloadSection');
       const downloadLink = document.getElementById('downloadLink');
       downloadLink.href = `${API_BASE_URL}${data.download_url}`;
-      downloadLink.textContent = `Download ${downloadLink.href.split('/').pop()}`;
       downloadSection.style.display = 'block';
     } catch (err) {
       alert("Error: " + err.message);
-    } finally {
-      generateBtn.disabled = false;
-      spinner.style.display = 'none';
     }
   }
 </script>
+
+<button onclick="generateExcel()">Generate Excel</button>
 
 </body>
 </html>

@@ -116,10 +116,10 @@ async def root():
 @app.get("/search")
 async def search_products(q: str = Query(..., min_length=1), current_user: dict = Depends(get_current_user)):
     df = load_product_data()
-    filtered = df[
-        df["material_number"].str.contains(q, case=False) |
-        df["material_description"].str.contains(q, case=False)
-    ]
+    terms = [term.strip() for term in q.split(",")]
+    # Filter if any material_number or material_description contains any term
+    mask = df["material_number"].str.contains('|'.join(terms), case=False) | df["material_description"].str.contains('|'.join(terms), case=False)
+    filtered = df[mask]
     results = filtered.to_dict(orient="records")
     return {"results": results}
 
@@ -154,7 +154,7 @@ async def generate_excel(
     return {"message": "file generated", "download_url": f"/download/{filename}"}
 
 @app.get("/download/{filename}")
-async def download_file(filename: str, current_user: dict = Depends(get_current_user)):
+async def download_file(filename: str):
     file_path = os.path.join(FILE_DIR, filename)
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="File not found")

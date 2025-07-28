@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>SKF Lubrication Dashboard</title>
+<title>Dashboard - SKF Lubrication</title>
 <style>
   body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -20,7 +20,7 @@
     font-size: 1.2rem;
   }
   button.logout {
-    margin-top: 30px;
+    margin-top: 20px;
     padding: 10px 20px;
     font-size: 1rem;
     font-weight: 600;
@@ -33,272 +33,249 @@
   button.logout:hover {
     background-color: #7b6be8;
   }
-
-  /* Styles for sections */
-  #generate-section, #search-section {
-    margin-top: 50px;
-    text-align: left;
-    max-width: 600px;
-    margin-left: auto;
-    margin-right: auto;
-  }
   label {
     display: block;
-    margin: 10px 0 5px;
+    text-align: left;
+    max-width: 600px;
+    margin: 25px auto 8px;
     font-weight: bold;
+    font-size: 1.1rem;
   }
-  input[type="text"], select {
+  input[type="text"] {
+    max-width: 600px;
     width: 100%;
-    padding: 8px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    border: none;
+    font-size: 1rem;
+    background-color: #4a4868;
+    color: white;
+  }
+  select {
+    max-width: 600px;
+    width: 100%;
+    padding: 8px 12px;
     border-radius: 6px;
     border: none;
     background-color: #4a4868;
     color: white;
-    margin-bottom: 15px;
+    font-size: 1rem;
   }
-  select {
+  select[multiple] {
     height: 120px;
   }
-  button.generate-btn, button.search-btn {
-    padding: 10px 20px;
+  button {
+    margin-top: 15px;
+    padding: 10px 25px;
     border-radius: 6px;
     border: none;
     background-color: #5a4de4;
     color: white;
     cursor: pointer;
-    font-weight: bold;
+    font-weight: 600;
+    font-size: 1rem;
   }
-  button.generate-btn:hover, button.search-btn:hover {
+  button:hover {
     background-color: #7b6be8;
   }
-  #message, #search-results {
-    margin-top: 15px;
-    font-weight: bold;
+  #productDetails {
+    margin: 25px auto;
+    max-width: 900px;
+    background: #4a4868;
+    padding: 15px;
+    border-radius: 8px;
+    overflow-x: auto;
+    text-align: left;
+    color: white;
+  }
+  #productDetails table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  #productDetails th, #productDetails td {
+    border: 1px solid #777;
+    padding: 6px 10px;
+  }
+  #message {
+    margin-top: 20px;
+    font-weight: 600;
   }
   a.download-link {
     color: #a4a3f7;
     text-decoration: underline;
   }
-  ul.results-list {
-    list-style-type: none;
-    padding-left: 0;
-    max-height: 200px;
-    overflow-y: auto;
-    background: #2f2d44;
-    border-radius: 6px;
-  }
-  ul.results-list li {
-    padding: 8px 10px;
-    border-bottom: 1px solid #44416a;
-  }
-  ul.results-list li:last-child {
-    border-bottom: none;
-  }
 </style>
 </head>
 <body>
+  <h1>Welcome to SKF Lubrication Dashboard</h1>
+  <p id="userInfo">Loading user info...</p>
+  <button class="logout" onclick="logout()">Logout</button>
 
-<h1>Welcome to SKF Lubrication Dashboard</h1>
-<p id="userInfo">Loading user info...</p>
-<button class="logout" onclick="logout()">Logout</button>
-
-<!-- Search Section -->
-<div id="search-section">
-  <h2>Search Products</h2>
-  <label for="searchInput">Enter material number or description (comma separated):</label>
-  <input type="text" id="searchInput" placeholder="E.g. MAT001, Widget A" />
-  <button class="search-btn" onclick="searchProducts()">Search</button>
-
-  <div id="search-results"></div>
-</div>
-
-<!-- Generate Excel Section -->
-<div id="generate-section">
-  <h2>Generate Excel File</h2>
   <label for="materialsInput">Enter material numbers (comma separated):</label>
   <input type="text" id="materialsInput" placeholder="E.g. MAT001, MAT002" />
 
   <label for="fieldsSelect">Select fields to include:</label>
-  <select id="fieldsSelect" multiple>
-    <!-- Options will be added dynamically -->
-  </select>
+  <select id="fieldsSelect" multiple></select>
 
-  <button class="generate-btn" onclick="generateExcel()">Generate Excel</button>
+  <div>
+    <button id="btnShowDetails">Show Selected Products</button>
+    <button id="btnGenerateExcel">Generate Excel</button>
+  </div>
 
+  <div id="productDetails"></div>
   <div id="message"></div>
-</div>
 
-<script>
-  const API_BASE_URL = "https://sales-data-app.onrender.com"; 
+  <script>
+    const API_BASE_URL = "https://sales-data-app.onrender.com"; 
 
-  const userInfoElem = document.getElementById('userInfo');
-  const fieldsSelect = document.getElementById('fieldsSelect');
-  const messageDiv = document.getElementById('message');
-  const searchResultsDiv = document.getElementById('search-results');
+    const availableFields = [
+      "material_number", "material_description", "material_group", "price",
+      "total_quantity", "weight", "country_of_origin", "manufacturer", "shelf_life",
+      "storage_location", "batch_number", "quality_inspection_status"
+    ];
 
-  const availableFields = [
-    "material_number",
-    "material_description",
-    "material_group",
-    "base_uom",
-    "sales_uom",
-    "packing_unit",
-    "total_quantity",
-    "weight",
-    "weight_unit",
-    "volume",
-    "volume_unit",
-    "customs_tariff_number",
-    "country_of_origin",
-    "rohs",
-    "reach",
-    "manufacturer",
-    "manufacturer_part_number",
-    "shelf_life",
-    "storage_location",
-    "gross_weight",
-    "net_weight",
-    "batch_number",
-    "quality_inspection_status",
-    "price"
-  ];
+    const userInfo = document.getElementById('userInfo');
+    const materialsInput = document.getElementById('materialsInput');
+    const fieldsSelect = document.getElementById('fieldsSelect');
+    const productDetailsDiv = document.getElementById('productDetails');
+    const messageDiv = document.getElementById('message');
+    const btnShowDetails = document.getElementById('btnShowDetails');
+    const btnGenerateExcel = document.getElementById('btnGenerateExcel');
 
-  // Populate the fields dropdown
-  availableFields.forEach(field => {
-    const option = document.createElement('option');
-    option.value = field;
-    option.textContent = field.replace(/_/g, ' ');
-    fieldsSelect.appendChild(option);
-  });
+    // Populate fields dropdown
+    availableFields.forEach(field => {
+      const opt = document.createElement('option');
+      opt.value = field;
+      opt.textContent = field.replace(/_/g, ' ');
+      fieldsSelect.appendChild(opt);
+    });
 
-  // Load user info
-  async function loadUserInfo() {
-    const token = sessionStorage.getItem('access_token');
-    if (!token) {
-      window.location.href = "index.html";
-      return;
-    }
-    try {
-      const res = await fetch(`${API_BASE_URL}/me`, {
-        headers: { 'Authorization': 'Bearer ' + token }
-      });
-      if (!res.ok) {
-        sessionStorage.removeItem('access_token');
+    // Load current user info on page load
+    async function loadUserInfo() {
+      const token = sessionStorage.getItem('access_token');
+      if (!token) {
         window.location.href = "index.html";
         return;
       }
-      const data = await res.json();
-      userInfoElem.textContent = `You are logged in as: ${data.username}`;
-    } catch {
-      userInfoElem.textContent = 'Error loading user info';
-    }
-  }
 
-  // Logout
-  function logout() {
-    sessionStorage.removeItem('access_token');
-    window.location.href = "index.html";
-  }
-
-  // Search products
-  async function searchProducts() {
-    const queryRaw = document.getElementById('searchInput').value.trim();
-    searchResultsDiv.innerHTML = '';
-
-    if (!queryRaw) {
-      searchResultsDiv.innerHTML = '<p style="color:#ff7777;">Please enter search terms.</p>';
-      return;
-    }
-
-    const token = sessionStorage.getItem('access_token');
-    if (!token) {
-      alert('Please login first.');
-      window.location.href = "index.html";
-      return;
-    }
-
-    try {
-      // The API expects comma separated string, send as is
-      const res = await fetch(`${API_BASE_URL}/search?q=${encodeURIComponent(queryRaw)}`, {
-        headers: { 'Authorization': 'Bearer ' + token }
-      });
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.detail || 'Search failed.');
+      try {
+        const res = await fetch(`${API_BASE_URL}/me`, {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (!res.ok) {
+          sessionStorage.removeItem('access_token');
+          window.location.href = "index.html";
+          return;
+        }
+        const data = await res.json();
+        userInfo.textContent = `You are logged in as: ${data.username}`;
+      } catch (err) {
+        userInfo.textContent = 'Error loading user info';
       }
-      const data = await res.json();
+    }
 
-      if (data.results.length === 0) {
-        searchResultsDiv.innerHTML = '<p>No matching products found.</p>';
+    // Logout function
+    function logout() {
+      sessionStorage.removeItem('access_token');
+      window.location.href = "index.html";
+    }
+
+    // Show product details button click
+    btnShowDetails.onclick = async () => {
+      const materials = materialsInput.value.split(',')
+        .map(m => m.trim()).filter(Boolean);
+      const token = sessionStorage.getItem('access_token');
+      productDetailsDiv.innerHTML = '';
+      messageDiv.textContent = '';
+
+      if (!token) {
+        alert("Please login first.");
+        window.location.href = "index.html";
+        return;
+      }
+      if (materials.length === 0) {
+        alert("Enter at least one material number.");
         return;
       }
 
-      const ul = document.createElement('ul');
-      ul.className = 'results-list';
+      try {
+        const res = await fetch(`${API_BASE_URL}/search?q=${encodeURIComponent(materials.join(','))}`, {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (!res.ok) throw new Error("Failed to fetch product details");
+        const data = await res.json();
 
-      data.results.forEach(item => {
-        const li = document.createElement('li');
-        li.textContent = `${item.material_number} - ${item.material_description}`;
-        ul.appendChild(li);
-      });
-      searchResultsDiv.appendChild(ul);
+        if (!data.results || data.results.length === 0) {
+          productDetailsDiv.innerHTML = "<p>No products found.</p>";
+          return;
+        }
 
-    } catch (error) {
-      searchResultsDiv.innerHTML = `<p style="color:#ff7777;">Error: ${error.message}</p>`;
-    }
-  }
+        let html = '<table><thead><tr>';
+        Object.keys(data.results[0]).forEach(key => {
+          html += `<th>${key.replace(/_/g,' ')}</th>`;
+        });
+        html += '</tr></thead><tbody>';
 
-  // Generate Excel
-  async function generateExcel() {
-    const materialsRaw = document.getElementById('materialsInput').value.trim();
-    messageDiv.textContent = '';
+        data.results.forEach(prod => {
+          html += '<tr>';
+          Object.values(prod).forEach(val => {
+            html += `<td>${val}</td>`;
+          });
+          html += '</tr>';
+        });
+        html += '</tbody></table>';
 
-    if (!materialsRaw) {
-      alert('Please enter material numbers.');
-      return;
-    }
+        productDetailsDiv.innerHTML = html;
+      } catch (err) {
+        productDetailsDiv.innerHTML = `<p style="color:#ff7777;">Error: ${err.message}</p>`;
+      }
+    };
 
-    const materialNumbers = materialsRaw.split(',').map(m => m.trim()).filter(m => m.length > 0);
-    const selectedOptions = [...fieldsSelect.selectedOptions];
-    if (selectedOptions.length === 0) {
-      alert('Please select at least one field.');
-      return;
-    }
-    const fields = selectedOptions.map(opt => opt.value);
+    // Generate Excel button click
+    btnGenerateExcel.onclick = async () => {
+      const materials = materialsInput.value.split(',')
+        .map(m => m.trim()).filter(Boolean);
+      const selectedFields = [...fieldsSelect.selectedOptions].map(o => o.value);
+      const token = sessionStorage.getItem('access_token');
+      messageDiv.textContent = '';
 
-    const token = sessionStorage.getItem('access_token');
-    if (!token) {
-      alert('Please login first.');
-      window.location.href = "index.html";
-      return;
-    }
-
-    try {
-      const res = await fetch(`${API_BASE_URL}/generate`, {
-        method: 'POST',
-        headers: {
-          'Authorization': 'Bearer ' + token,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ material_numbers: materialNumbers, fields })
-      });
-
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.detail || 'Failed to generate file.');
+      if (!token) {
+        alert("Please login first.");
+        window.location.href = "index.html";
+        return;
+      }
+      if (materials.length === 0) {
+        alert("Enter at least one material number.");
+        return;
+      }
+      if (selectedFields.length === 0) {
+        alert("Select at least one field.");
+        return;
       }
 
-      const data = await res.json();
-      const downloadUrl = data.download_url;
-      messageDiv.innerHTML = `<p>File generated successfully! <a href="${API_BASE_URL}${downloadUrl}" target="_blank" class="download-link">Download Excel</a></p>`;
-    } catch (error) {
-      messageDiv.innerHTML = `<p style="color: #ff7777;">Error: ${error.message}</p>`;
-    }
-  }
+      try {
+        const res = await fetch(`${API_BASE_URL}/generate`, {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ material_numbers: materials, fields: selectedFields })
+        });
 
-  // On page load
-  loadUserInfo();
-</script>
+        if (!res.ok) {
+          const errData = await res.json();
+          throw new Error(errData.detail || 'Failed to generate Excel');
+        }
 
+        const data = await res.json();
+        messageDiv.innerHTML = `<p>File generated successfully! <a href="${API_BASE_URL}${data.download_url}" target="_blank" class="download-link">Download Excel</a></p>`;
+      } catch (err) {
+        messageDiv.innerHTML = `<p style="color:#ff7777;">Error: ${err.message}</p>`;
+      }
+    };
+
+    loadUserInfo();
+  </script>
 </body>
 </html>

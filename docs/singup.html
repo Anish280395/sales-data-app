@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>SKF Lubrication - Login</title>
+<title>SKF Lubrication - Sign Up</title>
 <style>
-  /* Reset */
+  /* Same styling as login page for consistency */
   * {
     box-sizing: border-box;
   }
@@ -53,7 +53,7 @@
     font-weight: 400;
     color: #ccc;
   }
-  input[type="text"], input[type="password"] {
+  input[type="email"], input[type="password"] {
     width: 100%;
     padding: 14px 12px;
     margin-bottom: 20px;
@@ -63,8 +63,7 @@
     background-color: #4a4868;
     color: #eee;
   }
-  input[type="text"]::placeholder,
-  input[type="password"]::placeholder {
+  input::placeholder {
     color: #bbb;
   }
   button {
@@ -97,69 +96,89 @@
     color: #ff7777;
     margin-bottom: 15px;
   }
+  .success-message {
+    color: #77ff77;
+    margin-bottom: 15px;
+  }
 </style>
 </head>
 <body>
 
 <div class="container">
   <div class="left">
-    <div class="overlay-text">Capturing Moments, Creating Memories</div>
+    <div class="overlay-text">Join SKF Lubrication and stay updated!</div>
   </div>
   <div class="right">
-    <h1>SKF Lubrication</h1>
-    <p class="subtitle">Sign in to your account</p>
+    <h1>Sign Up</h1>
+    <p class="subtitle">Create your SKF account</p>
 
     <div id="errorMsg" class="error-message" role="alert"></div>
+    <div id="successMsg" class="success-message" role="alert"></div>
 
-    <input type="text" id="username" placeholder="Username" autocomplete="username" aria-label="Username" />
-    <input type="password" id="password" placeholder="Password" autocomplete="current-password" aria-label="Password" />
-    <button type="button" onclick="login()">Login</button>
+    <input type="email" id="email" placeholder="Your email (@skf.com only)" autocomplete="email" />
+    <input type="password" id="password" placeholder="Password" autocomplete="new-password" />
+    <input type="password" id="confirmPassword" placeholder="Confirm Password" autocomplete="new-password" />
+    <button type="button" onclick="signup()">Sign Up</button>
 
     <div class="footer">
-      <p>Don't have an account? <a href="signup.html">Sign up</a></p>
+      <p>Already have an account? <a href="index.html">Login</a></p>
     </div>
   </div>
 </div>
 
 <script>
   const API_BASE_URL = "https://sales-data-app.onrender.com";
-  
-  async function login() {
-    const username = document.getElementById('username').value.trim();
-    const password = document.getElementById('password').value.trim();
-    const errorMsg = document.getElementById('errorMsg');
-    errorMsg.textContent = '';
 
-    if (!username || !password) {
-      errorMsg.textContent = "Please enter username and password.";
+  async function signup() {
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value.trim();
+    const confirmPassword = document.getElementById('confirmPassword').value.trim();
+    const errorMsg = document.getElementById('errorMsg');
+    const successMsg = document.getElementById('successMsg');
+    errorMsg.textContent = '';
+    successMsg.textContent = '';
+
+    if (!email || !password || !confirmPassword) {
+      errorMsg.textContent = "Please fill in all fields.";
+      return;
+    }
+
+    if (!email.endsWith('@skf.com')) {
+      errorMsg.textContent = "Email must be a valid @skf.com address.";
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      errorMsg.textContent = "Passwords do not match.";
+      return;
+    }
+
+    if (password.length < 6) {
+      errorMsg.textContent = "Password must be at least 6 characters.";
       return;
     }
 
     try {
-      const res = await fetch(`${API_BASE_URL}/token`, {
+      const res = await fetch(`${API_BASE_URL}/signup`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ username, password })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
       });
 
       if (!res.ok) {
-        if (res.status === 401) {
-          errorMsg.textContent = "Invalid username or password.";
-        } else {
-          errorMsg.textContent = "Login failed: " + res.statusText;
-        }
+        const data = await res.json();
+        errorMsg.textContent = data.detail || "Signup failed.";
         return;
       }
 
-      const data = await res.json();
-      sessionStorage.setItem('access_token', data.access_token);
-
-      alert('Login successful! Redirecting...');
-      // TODO: Replace with your app's main page or dashboard URL
-      window.location.href = "dashboard.html";
+      successMsg.textContent = "Signup successful! You can now login.";
+      // Optionally redirect to login after a delay:
+      setTimeout(() => {
+        window.location.href = "index.html";
+      }, 2000);
 
     } catch (err) {
-      errorMsg.textContent = "Login error: " + err.message;
+      errorMsg.textContent = "Signup error: " + err.message;
     }
   }
 </script>

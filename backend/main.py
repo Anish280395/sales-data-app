@@ -2,6 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException, status, Query, Body
 from fastapi.responses import FileResponse
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, EmailStr, validator
 import pandas as pd
 import os
 import uuid
@@ -11,6 +12,7 @@ from jose import JWTError, jwt
 from datetime import datetime, timedelta
 
 app = FastAPI()
+
 origins = [
     "http://localhost",
     "http://localhost:5500",
@@ -36,22 +38,40 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
+# In-memory user store for testing; keys are emails (lowercase)
 fake_users_db = {
-    "anish": {
-        "username": "anish",
+    "anish@skf.com": {
+        "username": "anish@skf.com",
         "hashed_password": pwd_context.hash("anish123"),
     },
-    "Rohan": {
-        "username": "Rohan001",
+    "rohan@skf.com": {
+        "username": "rohan@skf.com",
         "hashed_password": pwd_context.hash("Rohan123"),
     },
 }
+
+# Pydantic model for signup request validation
+class SignupRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+    @validator('email')
+    def validate_skf_email(cls, v):
+        if not v.endswith('@skf.com'):
+            raise ValueError('Email must be an @skf.com address')
+        return v.lower()
+
+    @validator('password')
+    def password_length(cls, v):
+        if len(v) < 6:
+            raise ValueError('Password must be at least 6 characters')
+        return v
 
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
 
 def get_user(username: str):
-    user = fake_users_db.get(username)
+    user = fake_users_db.get(username.lower())
     return user
 
 def authenticate_user(username: str, password: str):
@@ -85,6 +105,19 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         raise credentials_exception
     return user
 
+# Signup API endpoint
+@app.post("/signup")
+async def signup(data: SignupRequest):
+    email = data.email
+    if email in fake_users_db:
+        raise HTTPException(status_code=400, detail="User already exists")
+
+    hashed_password = pwd_context.hash(data.password)
+    fake_users_db[email] = {"username": email, "hashed_password": hashed_password}
+
+    return {"message": "Signup successful"}
+
+# Login API endpoint
 @app.post("/token")
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     user = authenticate_user(form_data.username, form_data.password)
@@ -99,7 +132,6 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
         data={"sub": user['username']}, expires_delta=access_token_expires
     )
     return {"access_token": access_token, "token_type": "bearer"}
-
 
 FILE_DIR = "generated_files"
 os.makedirs(FILE_DIR, exist_ok=True)
@@ -117,7 +149,6 @@ async def root():
 async def search_products(q: str = Query(..., min_length=1), current_user: dict = Depends(get_current_user)):
     df = load_product_data()
     terms = [term.strip() for term in q.split(",")]
-    # Filter if any material_number or material_description contains any term
     mask = df["material_number"].str.contains('|'.join(terms), case=False) | df["material_description"].str.contains('|'.join(terms), case=False)
     filtered = df[mask]
     results = filtered.to_dict(orient="records")
@@ -137,7 +168,6 @@ async def generate_excel(
     
     df = load_product_data()
     
-    # Filter dataframe by all requested material numbers
     filtered = df[df["material_number"].isin(material_numbers)]
     
     if filtered.empty:
@@ -145,7 +175,6 @@ async def generate_excel(
             status_code=404, detail="None of the material numbers found."
         )
     
-    # Select only the requested fields (make sure they exist in df)
     valid_fields = [field for field in fields if field in df.columns]
     filtered = filtered[valid_fields]
     

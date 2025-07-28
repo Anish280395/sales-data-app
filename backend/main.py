@@ -152,7 +152,8 @@ async def search_products(q: str = Query(..., min_length=1), current_user: dict 
     mask = df["material_number"].str.contains('|'.join(terms), case=False) | df["material_description"].str.contains('|'.join(terms), case=False)
     filtered = df[mask]
     results = filtered.to_dict(orient="records")
-    return {"results": results}
+    return results  # <-- Return list directly
+
 
 @app.post("/generate")
 async def generate_excel(

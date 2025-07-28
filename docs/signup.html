@@ -127,6 +127,7 @@
 </div>
 
 <script>
+  // Your backend API URL (adjust if your backend URL changes)
   const API_BASE_URL = "https://sales-data-app.onrender.com";
 
   async function signup() {
@@ -172,7 +173,7 @@
       }
 
       successMsg.textContent = "Signup successful! You can now login.";
-      // Optionally redirect to login after a delay:
+      // Redirect to login page after 2 seconds
       setTimeout(() => {
         window.location.href = "index.html";
       }, 2000);

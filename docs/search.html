@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SKF Lubrication - Search Sales Data</title>
+<style>
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #3c3a54;
+    color: white;
+    padding: 20px;
+  }
+  h1 {
+    margin-bottom: 20px;
+  }
+  input[type="text"] {
+    width: 300px;
+    padding: 10px;
+    border-radius: 6px;
+    border: none;
+    margin-right: 10px;
+  }
+  button {
+    padding: 10px 15px;
+    border-radius: 6px;
+    border: none;
+    background-color: #5a4de4;
+    color: white;
+    cursor: pointer;
+  }
+  button:hover {
+    background-color: #7b6be8;
+  }
+  #results {
+    margin-top: 30px;
+  }
+  ul {
+    list-style: none;
+    padding-left: 0;
+  }
+  li {
+    padding: 8px 0;
+    border-bottom: 1px solid #555;
+  }
+</style>
+</head>
+<body>
+
+<h1>Search Sales Data</h1>
+
+<input type="text" id="searchTerm" placeholder="Enter search term" />
+<button onclick="performSearch()">Search</button>
+
+<div id="results"></div>
+
+<script>
+  const API_BASE_URL = "https://sales-data-app.onrender.com";
+
+  async function performSearch() {
+    const term = document.getElementById('searchTerm').value.trim();
+    const resultsDiv = document.getElementById('results');
+    resultsDiv.innerHTML = '';
+
+    if (!term) {
+      alert('Please enter a search term');
+      return;
+    }
+
+    const token = sessionStorage.getItem('access_token');
+    if (!token) {
+      alert('Please login first.');
+      window.location.href = "index.html";
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/search?q=${encodeURIComponent(term)}`, {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+
+      if (!res.ok) throw new Error('Search failed with status ' + res.status);
+
+      const data = await res.json();
+      const results = data.results;
+
+      if (!results || results.length === 0) {
+        resultsDiv.innerHTML = '<p>No results found.</p>';
+        return;
+      }
+
+      let html = '<ul>';
+      results.forEach(item => {
+        html += `<li><strong>${item.material_number}</strong>: ${item.material_description}</li>`;
+      });
+      html += '</ul>';
+      resultsDiv.innerHTML = html;
+
+    } catch (error) {
+      resultsDiv.innerHTML = `<p style="color:red;">Error: ${error.message}</p>`;
+    }
+  }
+</script>
+
+</body>
+</html>

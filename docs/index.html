@@ -109,7 +109,7 @@
     <h1>SKF Lubrication</h1>
     <p class="subtitle">Sign in to your account</p>
 
-    <div id="errorMsg" class="error-message" role="alert"></div>
+    <div id="errorMsg" class="error-message" role="alert" aria-live="assertive"></div>
 
     <input type="text" id="username" placeholder="Username" autocomplete="username" aria-label="Username" />
     <input type="password" id="password" placeholder="Password" autocomplete="current-password" aria-label="Password" />
@@ -123,7 +123,7 @@
 
 <script>
   const API_BASE_URL = "https://sales-data-app.onrender.com";
-  
+
   async function login() {
     const username = document.getElementById('username').value.trim();
     const password = document.getElementById('password').value.trim();
@@ -155,7 +155,6 @@
       sessionStorage.setItem('access_token', data.access_token);
 
       alert('Login successful! Redirecting...');
-      // TODO: Replace with your app's main page or dashboard URL
       window.location.href = "dashboard.html";
 
     } catch (err) {

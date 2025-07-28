@@ -3,279 +3,311 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Dashboard - SKF Lubrication</title>
+<title>SKF Lubrication Dashboard</title>
 <style>
   body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background: #3c3a54;
     color: white;
-    padding: 40px;
-    text-align: center;
+    padding: 20px;
   }
   h1 {
-    font-size: 2.5rem;
+    text-align: center;
+  }
+  #userInfo {
     margin-bottom: 20px;
-  }
-  p {
-    font-size: 1.2rem;
-  }
-  button.logout {
-    margin-top: 20px;
-    padding: 10px 20px;
-    font-size: 1rem;
-    font-weight: 600;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    background-color: #5a4de4;
-    color: white;
-  }
-  button.logout:hover {
-    background-color: #7b6be8;
+    text-align: center;
   }
   label {
     display: block;
-    text-align: left;
-    max-width: 600px;
-    margin: 25px auto 8px;
-    font-weight: bold;
-    font-size: 1.1rem;
+    margin-top: 15px;
+    margin-bottom: 5px;
   }
-  input[type="text"] {
-    max-width: 600px;
+  input[type="text"], select {
     width: 100%;
-    padding: 10px 12px;
-    border-radius: 6px;
-    border: none;
-    font-size: 1rem;
-    background-color: #4a4868;
-    color: white;
-  }
-  select {
-    max-width: 600px;
-    width: 100%;
-    padding: 8px 12px;
+    max-width: 400px;
+    padding: 8px;
     border-radius: 6px;
     border: none;
     background-color: #4a4868;
     color: white;
-    font-size: 1rem;
   }
   select[multiple] {
     height: 120px;
   }
   button {
     margin-top: 15px;
-    padding: 10px 25px;
+    padding: 10px 20px;
     border-radius: 6px;
     border: none;
     background-color: #5a4de4;
     color: white;
     cursor: pointer;
-    font-weight: 600;
-    font-size: 1rem;
+    font-weight: bold;
   }
   button:hover {
     background-color: #7b6be8;
   }
-  #productDetails {
-    margin: 25px auto;
+  #searchResults {
+    margin-top: 20px;
     max-width: 900px;
     background: #4a4868;
     padding: 15px;
     border-radius: 8px;
     overflow-x: auto;
-    text-align: left;
-    color: white;
   }
-  #productDetails table {
+  table {
     width: 100%;
     border-collapse: collapse;
   }
-  #productDetails th, #productDetails td {
+  th, td {
     border: 1px solid #777;
-    padding: 6px 10px;
+    padding: 8px;
+    text-align: left;
   }
   #message {
-    margin-top: 20px;
-    font-weight: 600;
+    margin-top: 15px;
   }
   a.download-link {
     color: #a4a3f7;
     text-decoration: underline;
   }
+  #logoutBtn {
+    display: block;
+    margin: 0 auto 20px;
+    padding: 8px 16px;
+    font-weight: 600;
+  }
 </style>
 </head>
 <body>
-  <h1>Welcome to SKF Lubrication Dashboard</h1>
-  <p id="userInfo">Loading user info...</p>
-  <button class="logout" onclick="logout()">Logout</button>
 
-  <label for="materialsInput">Enter material numbers (comma separated):</label>
-  <input type="text" id="materialsInput" placeholder="E.g. MAT001, MAT002" />
+<h1>Welcome to SKF Lubrication Dashboard</h1>
+<div id="userInfo">Loading user info...</div>
+<button id="logoutBtn">Logout</button>
 
-  <label for="fieldsSelect">Select fields to include:</label>
-  <select id="fieldsSelect" multiple></select>
+<label for="materialsInput">Enter material numbers (comma separated):</label>
+<input type="text" id="materialsInput" placeholder="E.g. MAT001, MAT002" />
 
-  <div>
-    <button id="btnShowDetails">Show Selected Products</button>
-    <button id="btnGenerateExcel">Generate Excel</button>
-  </div>
+<label for="fieldsSelect">Select fields to include:</label>
+<select id="fieldsSelect" multiple>
+  <!-- Will be populated dynamically -->
+</select>
 
-  <div id="productDetails"></div>
-  <div id="message"></div>
+<button id="searchBtn">Search Products</button>
+<button id="generateBtn">Generate Excel</button>
 
-  <script>
-    const API_BASE_URL = "https://sales-data-app.onrender.com"; 
+<div id="message"></div>
+<div id="searchResults"></div>
 
-    const availableFields = [
-      "material_number", "material_description", "material_group", "price",
-      "total_quantity", "weight", "country_of_origin", "manufacturer", "shelf_life",
-      "storage_location", "batch_number", "quality_inspection_status"
-    ];
+<script>
+  const API_BASE_URL = "https://sales-data-app.onrender.com"; 
 
-    const userInfo = document.getElementById('userInfo');
-    const materialsInput = document.getElementById('materialsInput');
-    const fieldsSelect = document.getElementById('fieldsSelect');
-    const productDetailsDiv = document.getElementById('productDetails');
-    const messageDiv = document.getElementById('message');
-    const btnShowDetails = document.getElementById('btnShowDetails');
-    const btnGenerateExcel = document.getElementById('btnGenerateExcel');
+  // Store user info
+  let currentUser = null;
 
-    // Populate fields dropdown
+  // Available fields - must match your CSV columns and backend
+  const availableFields = [
+    "material_number",
+    "material_description",
+    "material_group",
+    "base_uom",
+    "sales_uom",
+    "packing_unit",
+    "total_quantity",
+    "weight",
+    "weight_unit",
+    "volume",
+    "volume_unit",
+    "customs_tariff_number",
+    "country_of_origin",
+    "ROHS",
+    "REACH",
+    "manufacturer",
+    "manufacturer_part_number",
+    "shelf_life",
+    "storage_location",
+    "gross_weight",
+    "net_weight",
+    "batch_number",
+    "quality_inspection_status",
+    "price"
+  ];
+
+  const userInfoDiv = document.getElementById('userInfo');
+  const materialsInput = document.getElementById('materialsInput');
+  const fieldsSelect = document.getElementById('fieldsSelect');
+  const searchBtn = document.getElementById('searchBtn');
+  const generateBtn = document.getElementById('generateBtn');
+  const messageDiv = document.getElementById('message');
+  const searchResultsDiv = document.getElementById('searchResults');
+  const logoutBtn = document.getElementById('logoutBtn');
+
+  // Populate fields select options
+  function populateFields() {
+    fieldsSelect.innerHTML = '';
     availableFields.forEach(field => {
-      const opt = document.createElement('option');
-      opt.value = field;
-      opt.textContent = field.replace(/_/g, ' ');
-      fieldsSelect.appendChild(opt);
+      const option = document.createElement('option');
+      option.value = field;
+      option.textContent = field.replace(/_/g, ' ');
+      fieldsSelect.appendChild(option);
     });
+  }
 
-    // Load current user info on page load
-    async function loadUserInfo() {
-      const token = sessionStorage.getItem('access_token');
-      if (!token) {
-        window.location.href = "index.html";
-        return;
-      }
-
-      try {
-        const res = await fetch(`${API_BASE_URL}/me`, {
-          headers: { 'Authorization': 'Bearer ' + token }
-        });
-        if (!res.ok) {
-          sessionStorage.removeItem('access_token');
-          window.location.href = "index.html";
-          return;
-        }
-        const data = await res.json();
-        userInfo.textContent = `You are logged in as: ${data.username}`;
-      } catch (err) {
-        userInfo.textContent = 'Error loading user info';
-      }
+  // Fetch and show user info on load
+  async function loadUserInfo() {
+    const token = sessionStorage.getItem('access_token');
+    if (!token) {
+      userInfoDiv.textContent = 'Not logged in. Please login first.';
+      setTimeout(() => window.location.href = 'index.html', 2000);
+      return;
     }
 
-    // Logout function
-    function logout() {
-      sessionStorage.removeItem('access_token');
-      window.location.href = "index.html";
+    try {
+      const res = await fetch(`${API_BASE_URL}/me`, {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      if (!res.ok) throw new Error('Failed to load user info');
+
+      currentUser = await res.json();
+      userInfoDiv.textContent = `You are logged in as: ${currentUser.username}`;
+    } catch (err) {
+      userInfoDiv.textContent = 'Error loading user info. Redirecting to login...';
+      setTimeout(() => window.location.href = 'index.html', 2000);
+    }
+  }
+
+  // Logout
+  logoutBtn.addEventListener('click', () => {
+    sessionStorage.removeItem('access_token');
+    window.location.href = 'index.html';
+  });
+
+  // Search products API call
+  async function searchProducts() {
+    messageDiv.textContent = '';
+    searchResultsDiv.innerHTML = '';
+
+    let query = materialsInput.value.trim();
+    if (!query) {
+      messageDiv.textContent = 'Please enter at least one material number.';
+      return;
     }
 
-    // Show product details button click
-    btnShowDetails.onclick = async () => {
-      const materials = materialsInput.value.split(',')
-        .map(m => m.trim()).filter(Boolean);
-      const token = sessionStorage.getItem('access_token');
-      productDetailsDiv.innerHTML = '';
-      messageDiv.textContent = '';
+    const token = sessionStorage.getItem('access_token');
+    if (!token) {
+      messageDiv.textContent = 'You are not logged in.';
+      return;
+    }
 
-      if (!token) {
-        alert("Please login first.");
-        window.location.href = "index.html";
-        return;
-      }
-      if (materials.length === 0) {
-        alert("Enter at least one material number.");
-        return;
-      }
+    try {
+      const res = await fetch(`${API_BASE_URL}/search?q=${encodeURIComponent(query)}`, {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      if (!res.ok) throw new Error('Failed to fetch products');
 
-      try {
-        const res = await fetch(`${API_BASE_URL}/search?q=${encodeURIComponent(materials.join(','))}`, {
-          headers: { 'Authorization': 'Bearer ' + token }
-        });
-        if (!res.ok) throw new Error("Failed to fetch product details");
-        const data = await res.json();
-
-        if (!data.results || data.results.length === 0) {
-          productDetailsDiv.innerHTML = "<p>No products found.</p>";
-          return;
-        }
-
-        let html = '<table><thead><tr>';
-        Object.keys(data.results[0]).forEach(key => {
-          html += `<th>${key.replace(/_/g,' ')}</th>`;
-        });
-        html += '</tr></thead><tbody>';
-
-        data.results.forEach(prod => {
-          html += '<tr>';
-          Object.values(prod).forEach(val => {
-            html += `<td>${val}</td>`;
-          });
-          html += '</tr>';
-        });
-        html += '</tbody></table>';
-
-        productDetailsDiv.innerHTML = html;
-      } catch (err) {
-        productDetailsDiv.innerHTML = `<p style="color:#ff7777;">Error: ${err.message}</p>`;
-      }
-    };
-
-    // Generate Excel button click
-    btnGenerateExcel.onclick = async () => {
-      const materials = materialsInput.value.split(',')
-        .map(m => m.trim()).filter(Boolean);
-      const selectedFields = [...fieldsSelect.selectedOptions].map(o => o.value);
-      const token = sessionStorage.getItem('access_token');
-      messageDiv.textContent = '';
-
-      if (!token) {
-        alert("Please login first.");
-        window.location.href = "index.html";
-        return;
-      }
-      if (materials.length === 0) {
-        alert("Enter at least one material number.");
-        return;
-      }
-      if (selectedFields.length === 0) {
-        alert("Select at least one field.");
+      const products = await res.json();
+      if (!products.length) {
+        searchResultsDiv.textContent = 'No products found.';
         return;
       }
 
-      try {
-        const res = await fetch(`${API_BASE_URL}/generate`, {
-          method: 'POST',
-          headers: {
-            'Authorization': 'Bearer ' + token,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ material_numbers: materials, fields: selectedFields })
-        });
+      displayProducts(products);
+    } catch (err) {
+      messageDiv.textContent = 'Error: ' + err.message;
+    }
+  }
 
-        if (!res.ok) {
-          const errData = await res.json();
-          throw new Error(errData.detail || 'Failed to generate Excel');
-        }
+  // Display products in a table
+  function displayProducts(products) {
+    if (!products.length) {
+      searchResultsDiv.textContent = 'No products found.';
+      return;
+    }
 
-        const data = await res.json();
-        messageDiv.innerHTML = `<p>File generated successfully! <a href="${API_BASE_URL}${data.download_url}" target="_blank" class="download-link">Download Excel</a></p>`;
-      } catch (err) {
-        messageDiv.innerHTML = `<p style="color:#ff7777;">Error: ${err.message}</p>`;
+    const table = document.createElement('table');
+    const thead = document.createElement('thead');
+    const headerRow = document.createElement('tr');
+
+    // Use keys from first product as columns
+    Object.keys(products[0]).forEach(col => {
+      const th = document.createElement('th');
+      th.textContent = col.replace(/_/g, ' ');
+      headerRow.appendChild(th);
+    });
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
+    products.forEach(product => {
+      const tr = document.createElement('tr');
+      Object.values(product).forEach(val => {
+        const td = document.createElement('td');
+        td.textContent = val;
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+
+    searchResultsDiv.innerHTML = '';
+    searchResultsDiv.appendChild(table);
+  }
+
+  // Generate Excel API call
+  async function generateExcel() {
+    messageDiv.textContent = '';
+
+    const materialNumbersRaw = materialsInput.value.trim();
+    if (!materialNumbersRaw) {
+      messageDiv.textContent = 'Please enter material numbers.';
+      return;
+    }
+    const materialNumbers = materialNumbersRaw.split(',').map(m => m.trim()).filter(m => m);
+
+    const selectedOptions = [...fieldsSelect.selectedOptions];
+    if (selectedOptions.length === 0) {
+      messageDiv.textContent = 'Please select at least one field.';
+      return;
+    }
+    const fields = selectedOptions.map(opt => opt.value);
+
+    const token = sessionStorage.getItem('access_token');
+    if (!token) {
+      messageDiv.textContent = 'You are not logged in.';
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/generate`, {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + token,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ material_numbers: materialNumbers, fields })
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.detail || 'Failed to generate Excel file.');
       }
-    };
 
-    loadUserInfo();
-  </script>
+      const data = await res.json();
+      messageDiv.innerHTML = `Excel file generated! <a href="${API_BASE_URL}${data.download_url}" target="_blank" class="download-link">Download here</a>`;
+    } catch (err) {
+      messageDiv.textContent = 'Error: ' + err.message;
+    }
+  }
+
+  // Add event listeners
+  searchBtn.addEventListener('click', searchProducts);
+  generateBtn.addEventListener('click', generateExcel);
+
+  // Initialize on page load
+  populateFields();
+  loadUserInfo();
+</script>
+
 </body>
 </html>

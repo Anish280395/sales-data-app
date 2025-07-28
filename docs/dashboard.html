@@ -65,7 +65,7 @@
         }
 
         const data = await res.json();
-        document.getElementById('welcomeMsg').textContent = `You are logged in as: ${data.username}`;
+        document.getElementById('userInfo').textContent = `You are logged in as: ${data.username}`;
       } catch (error) {
         document.getElementById('welcomeMsg').textContent = 'Error loading user info';
       }

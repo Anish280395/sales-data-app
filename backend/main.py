@@ -42,11 +42,11 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 fake_users_db = {
     "anish@skf.com": {
         "username": "anish@skf.com",
-        "hashed_password": pwd_context.hash("anish123"),
+        "hashed_password": "$2b$12$kDPbwvWm0OecKMjSL/mC4.8Fmjz0S3nHLPojAPV0UQLGmZyQU0dJK",
     },
     "rohan@skf.com": {
         "username": "rohan@skf.com",
-        "hashed_password": pwd_context.hash("Rohan123"),
+        "hashed_password": "$2b$12$5gyn35wEOPKZkAXY0a5kN.dTuNB8vWD.2FcB7yKIVnWivPwnnN7JK",
     },
 }
 
@@ -197,3 +197,7 @@ async def download_file(filename: str):
 async def read_users_me(current_user: dict = Depends(get_current_user)):
     # Return user details like username/email
     return {"username": current_user["username"]}
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}

@@ -16,19 +16,68 @@
     font-size: 2.5rem;
     margin-bottom: 20px;
   }
-  a {
-    color: #5a4de4;
-    text-decoration: none;
-    font-weight: 600;
+  p {
+    font-size: 1.2rem;
   }
-  a:hover {
-    text-decoration: underline;
+  button.logout {
+    margin-top: 30px;
+    padding: 10px 20px;
+    font-size: 1rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    background-color: #5a4de4;
+    color: white;
+  }
+  button.logout:hover {
+    background-color: #7b6be8;
   }
 </style>
 </head>
 <body>
   <h1>Welcome to SKF Lubrication Dashboard</h1>
-  <p>You have successfully logged in.</p>
-  <p><a href="index.html">Logout</a></p>
+  <p id="userInfo">Loading user info...</p>
+  <button class="logout" onclick="logout()">Logout</button>
+
+  <script>
+    const API_BASE_URL = "https://sales-data-app.onrender.com";
+
+    async function loadUserInfo() {
+      const token = sessionStorage.getItem('access_token');
+      if (!token) {
+        window.location.href = "index.html";
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/me`, {
+          headers: {
+            'Authorization': 'Bearer ' + token
+          }
+        });
+
+        if (!res.ok) {
+          // Token might be invalid or expired
+          sessionStorage.removeItem('access_token');
+          window.location.href = "index.html";
+          return;
+        }
+
+        const data = await res.json();
+        document.getElementById('welcomeMsg').textContent = `You are logged in as: ${data.username}`;
+      } catch (error) {
+        document.getElementById('welcomeMsg').textContent = 'Error loading user info';
+      }
+    }
+
+
+    function logout() {
+      sessionStorage.removeItem('access_token');
+      window.location.href = "index.html";
+    }
+
+    loadUserInfo();
+  </script>
 </body>
 </html>

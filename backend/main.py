@@ -13,18 +13,10 @@ from datetime import datetime, timedelta
 
 app = FastAPI()
 
-origins = [
-    "http://localhost",
-    "http://localhost:5500",
-    "http://127.0.0.1",
-    "http://127.0.0.1:5500",
-    "http://127.0.0.1:8000",
-    "https://anish280395.github.io",
-]
-
+# Allow all origins for testing and CORS error mitigation
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["https://anish280395.github.io"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -143,8 +135,15 @@ async def root():
 @app.get("/search")
 async def search_products(q: str = Query(..., min_length=1), current_user: dict = Depends(get_current_user)):
     df = load_product_data()
+    print("Available columns:", df.columns.tolist())  # Debug log
     terms = [term.strip() for term in q.split(",")]
-    mask = df["material_number"].str.contains('|'.join(terms), case=False) | df["article_name"].str.contains('|'.join(terms), case=False)
+    try:
+        mask = df["material_number"].str.contains('|'.join(terms), case=False)
+        if "article_name" in df.columns:
+            mask |= df["article_name"].str.contains('|'.join(terms), case=False)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Search processing error: {str(e)}")
+
     filtered = df[mask]
     results = filtered.to_dict(orient="records")
     return results

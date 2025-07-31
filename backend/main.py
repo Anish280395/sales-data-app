@@ -133,7 +133,7 @@ os.makedirs(FILE_DIR, exist_ok=True)
 
 def load_product_data() -> pd.DataFrame:
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    csv_path = os.path.join(base_dir, "..", "product_data_100.csv")
+    csv_path = os.path.join(base_dir, "generated_files", "product_data_100.csv")
     return pd.read_csv(csv_path)
 
 @app.get("/")

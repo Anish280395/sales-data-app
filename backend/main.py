@@ -125,11 +125,17 @@ FILE_DIR = "generated_files"
 os.makedirs(FILE_DIR, exist_ok=True)
 
 def load_product_data() -> pd.DataFrame:
-    csv_path = os.path.join(os.path.dirname(__file__), FILE_DIR, "product_data_100.csv")
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    generated_dir = os.path.join(base_dir, "generated_files")
+    os.makedirs(generated_dir, exist_ok=True)  # ✅ Create directory if missing
+    csv_path = os.path.join(generated_dir, "product_data_100.csv")
+
     if not os.path.exists(csv_path):
-        countries = ["Germany", "France", "Italy"]
-        brands = ["BrandA", "BrandB"]
-        dimensions = ["10x5x2", "15x10x5"]
+        # Auto-generate dummy data if file missing
+        import random
+        countries = ["Germany", "France", "Italy", "Spain", "Netherlands", "Sweden", "Poland"]
+        brands = ["BrandA", "BrandB", "BrandC", "BrandX"]
+        dimensions = ["10x5x2", "15x10x5", "20x10x5", "5x5x5"]
         products = []
         for i in range(1, 101):
             products.append({
@@ -153,8 +159,10 @@ def load_product_data() -> pd.DataFrame:
             })
         df = pd.DataFrame(products)
         df.to_csv(csv_path, index=False)
-        return df
-    return pd.read_csv(csv_path)
+    else:
+        df = pd.read_csv(csv_path)
+
+    return df
 
 @app.get("/")
 async def root():

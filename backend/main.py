@@ -10,10 +10,11 @@ from typing import List, Optional
 from passlib.context import CryptContext
 from jose import JWTError, jwt
 from datetime import datetime, timedelta
+import random
 
 app = FastAPI()
 
-# Allow all origins for testing and CORS error mitigation
+# CORS for GitHub Pages access
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://anish280395.github.io"],
@@ -124,8 +125,35 @@ FILE_DIR = "generated_files"
 os.makedirs(FILE_DIR, exist_ok=True)
 
 def load_product_data() -> pd.DataFrame:
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    csv_path = os.path.join(base_dir, "generated_files", "product_data_100.csv")
+    csv_path = os.path.join(os.path.dirname(__file__), FILE_DIR, "product_data_100.csv")
+    if not os.path.exists(csv_path):
+        countries = ["Germany", "France", "Italy"]
+        brands = ["BrandA", "BrandB"]
+        dimensions = ["10x5x2", "15x10x5"]
+        products = []
+        for i in range(1, 101):
+            products.append({
+                "material_number": f"MAT{str(i).zfill(3)}",
+                "article_number": f"ART{str(i).zfill(3)}",
+                "article_name": f"Sample Product {i}",
+                "article_group_assignment": random.choice(["Electronics", "Hardware"]),
+                "weight": round(random.uniform(1.0, 150.0), 2),
+                "customs_tariff_number": f"{random.randint(10000000, 99999999)}",
+                "country_of_origin": random.choice(countries),
+                "purchase_price": round(random.uniform(10.0, 500.0), 2),
+                "purchase_price_unit": "EUR",
+                "predecessor_successor_article": None,
+                "descriptive_texts": "Auto-generated product entry.",
+                "product_image": f"product_image_{i}.jpg",
+                "article_dimensions": random.choice(dimensions),
+                "article_dimensions_unit": "cm",
+                "brand": random.choice(brands),
+                "ROHS": random.choice(["Yes", "No"]),
+                "REACH": random.choice(["Yes", "No"]),
+            })
+        df = pd.DataFrame(products)
+        df.to_csv(csv_path, index=False)
+        return df
     return pd.read_csv(csv_path)
 
 @app.get("/")
@@ -135,18 +163,12 @@ async def root():
 @app.get("/search")
 async def search_products(q: str = Query(..., min_length=1), current_user: dict = Depends(get_current_user)):
     df = load_product_data()
-    print("Available columns:", df.columns.tolist())  # Debug log
     terms = [term.strip() for term in q.split(",")]
-    try:
-        mask = df["material_number"].str.contains('|'.join(terms), case=False)
-        if "article_name" in df.columns:
-            mask |= df["article_name"].str.contains('|'.join(terms), case=False)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Search processing error: {str(e)}")
-
+    mask = df["material_number"].str.contains('|'.join(terms), case=False)
+    if "article_name" in df.columns:
+        mask |= df["article_name"].str.contains('|'.join(terms), case=False)
     filtered = df[mask]
-    results = filtered.to_dict(orient="records")
-    return results
+    return filtered.to_dict(orient="records")
 
 @app.post("/generate")
 async def generate_excel(

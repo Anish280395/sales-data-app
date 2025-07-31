@@ -90,9 +90,7 @@
 <input type="text" id="materialsInput" placeholder="E.g. MAT001, MAT002" />
 
 <label for="fieldsSelect">Select fields to include:</label>
-<select id="fieldsSelect" multiple>
-  <!-- Will be populated dynamically -->
-</select>
+<select id="fieldsSelect" multiple></select>
 
 <button id="searchBtn">Search Products</button>
 <button id="generateBtn">Generate Excel</button>
@@ -101,37 +99,27 @@
 <div id="searchResults"></div>
 
 <script>
-  const API_BASE_URL = "https://sales-data-app.onrender.com"; 
-
-  // Store user info
+  const API_BASE_URL = "https://sales-data-app.onrender.com";
   let currentUser = null;
 
-  // Available fields - must match your CSV columns and backend
   const availableFields = [
     "material_number",
-    "material_description",
-    "material_group",
-    "base_uom",
-    "sales_uom",
-    "packing_unit",
-    "total_quantity",
+    "article_number",
+    "article_name",
+    "article_group_assignment",
     "weight",
-    "weight_unit",
-    "volume",
-    "volume_unit",
     "customs_tariff_number",
     "country_of_origin",
+    "purchase_price",
+    "purchase_price_unit",
+    "predecessor_successor_article",
+    "descriptive_texts",
+    "product_image",
+    "article_dimensions",
+    "article_dimensions_unit",
+    "brand",
     "ROHS",
-    "REACH",
-    "manufacturer",
-    "manufacturer_part_number",
-    "shelf_life",
-    "storage_location",
-    "gross_weight",
-    "net_weight",
-    "batch_number",
-    "quality_inspection_status",
-    "price"
+    "REACH"
   ];
 
   const userInfoDiv = document.getElementById('userInfo');
@@ -143,7 +131,6 @@
   const searchResultsDiv = document.getElementById('searchResults');
   const logoutBtn = document.getElementById('logoutBtn');
 
-  // Populate fields select options
   function populateFields() {
     fieldsSelect.innerHTML = '';
     availableFields.forEach(field => {
@@ -154,7 +141,6 @@
     });
   }
 
-  // Fetch and show user info on load
   async function loadUserInfo() {
     const token = sessionStorage.getItem('access_token');
     if (!token) {
@@ -168,7 +154,6 @@
         headers: { 'Authorization': 'Bearer ' + token }
       });
       if (!res.ok) throw new Error('Failed to load user info');
-
       currentUser = await res.json();
       userInfoDiv.textContent = `You are logged in as: ${currentUser.username}`;
     } catch (err) {
@@ -177,59 +162,48 @@
     }
   }
 
-  // Logout
   logoutBtn.addEventListener('click', () => {
     sessionStorage.removeItem('access_token');
     window.location.href = 'index.html';
   });
 
-  // Search products API call
   async function searchProducts() {
     messageDiv.textContent = '';
     searchResultsDiv.innerHTML = '';
-
     let query = materialsInput.value.trim();
     if (!query) {
       messageDiv.textContent = 'Please enter at least one material number.';
       return;
     }
-
     const token = sessionStorage.getItem('access_token');
     if (!token) {
       messageDiv.textContent = 'You are not logged in.';
       return;
     }
-
     try {
       const res = await fetch(`${API_BASE_URL}/search?q=${encodeURIComponent(query)}`, {
         headers: { 'Authorization': 'Bearer ' + token }
       });
       if (!res.ok) throw new Error('Failed to fetch products');
-
       const products = await res.json();
       if (!products.length) {
         searchResultsDiv.textContent = 'No products found.';
         return;
       }
-
       displayProducts(products);
     } catch (err) {
       messageDiv.textContent = 'Error: ' + err.message;
     }
   }
 
-  // Display products in a table
   function displayProducts(products) {
     if (!products.length) {
       searchResultsDiv.textContent = 'No products found.';
       return;
     }
-
     const table = document.createElement('table');
     const thead = document.createElement('thead');
     const headerRow = document.createElement('tr');
-
-    // Use keys from first product as columns
     Object.keys(products[0]).forEach(col => {
       const th = document.createElement('th');
       th.textContent = col.replace(/_/g, ' ');
@@ -249,35 +223,29 @@
       tbody.appendChild(tr);
     });
     table.appendChild(tbody);
-
     searchResultsDiv.innerHTML = '';
     searchResultsDiv.appendChild(table);
   }
 
-  // Generate Excel API call
   async function generateExcel() {
     messageDiv.textContent = '';
-
     const materialNumbersRaw = materialsInput.value.trim();
     if (!materialNumbersRaw) {
       messageDiv.textContent = 'Please enter material numbers.';
       return;
     }
     const materialNumbers = materialNumbersRaw.split(',').map(m => m.trim()).filter(m => m);
-
     const selectedOptions = [...fieldsSelect.selectedOptions];
     if (selectedOptions.length === 0) {
       messageDiv.textContent = 'Please select at least one field.';
       return;
     }
     const fields = selectedOptions.map(opt => opt.value);
-
     const token = sessionStorage.getItem('access_token');
     if (!token) {
       messageDiv.textContent = 'You are not logged in.';
       return;
     }
-
     try {
       const res = await fetch(`${API_BASE_URL}/generate`, {
         method: 'POST',
@@ -287,12 +255,10 @@
         },
         body: JSON.stringify({ material_numbers: materialNumbers, fields })
       });
-
       if (!res.ok) {
         const errData = await res.json();
         throw new Error(errData.detail || 'Failed to generate Excel file.');
       }
-
       const data = await res.json();
       messageDiv.innerHTML = `Excel file generated! <a href="${API_BASE_URL}${data.download_url}" target="_blank" class="download-link">Download here</a>`;
     } catch (err) {
@@ -300,11 +266,8 @@
     }
   }
 
-  // Add event listeners
   searchBtn.addEventListener('click', searchProducts);
   generateBtn.addEventListener('click', generateExcel);
-
-  // Initialize on page load
   populateFields();
   loadUserInfo();
 </script>

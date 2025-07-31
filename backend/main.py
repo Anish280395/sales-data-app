@@ -37,7 +37,6 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-# In-memory user store for testing; keys are emails (lowercase)
 fake_users_db = {
     "anish@skf.com": {
         "username": "anish@skf.com",
@@ -49,7 +48,6 @@ fake_users_db = {
     },
 }
 
-# Pydantic model for signup request validation
 class SignupRequest(BaseModel):
     email: EmailStr
     password: str
@@ -104,7 +102,6 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         raise credentials_exception
     return user
 
-# Signup API endpoint
 @app.post("/signup")
 async def signup(data: SignupRequest):
     email = data.email
@@ -116,7 +113,6 @@ async def signup(data: SignupRequest):
 
     return {"message": "Signup successful"}
 
-# Login API endpoint
 @app.post("/token")
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     user = authenticate_user(form_data.username, form_data.password)
@@ -137,7 +133,7 @@ os.makedirs(FILE_DIR, exist_ok=True)
 
 def load_product_data() -> pd.DataFrame:
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    csv_path = os.path.join(base_dir, "..", "product_data.csv")
+    csv_path = os.path.join(base_dir, "..", "product_data_100.csv")
     return pd.read_csv(csv_path)
 
 @app.get("/")
@@ -148,11 +144,10 @@ async def root():
 async def search_products(q: str = Query(..., min_length=1), current_user: dict = Depends(get_current_user)):
     df = load_product_data()
     terms = [term.strip() for term in q.split(",")]
-    mask = df["material_number"].str.contains('|'.join(terms), case=False) | df["material_description"].str.contains('|'.join(terms), case=False)
+    mask = df["material_number"].str.contains('|'.join(terms), case=False) | df["article_name"].str.contains('|'.join(terms), case=False)
     filtered = df[mask]
     results = filtered.to_dict(orient="records")
-    return results  # <-- Return list directly
-
+    return results
 
 @app.post("/generate")
 async def generate_excel(
@@ -160,29 +155,24 @@ async def generate_excel(
     current_user: dict = Depends(get_current_user)):
     material_numbers: List[str] = data.get("material_numbers", [])
     fields: List[str] = data.get("fields", [])
-    
+
     if not material_numbers or not fields:
-        raise HTTPException(
-            status_code=400, detail="Material numbers and fields are required."
-        )
-    
+        raise HTTPException(status_code=400, detail="Material numbers and fields are required.")
+
     df = load_product_data()
-    
     filtered = df[df["material_number"].isin(material_numbers)]
-    
+
     if filtered.empty:
-        raise HTTPException(
-            status_code=404, detail="None of the material numbers found."
-        )
-    
+        raise HTTPException(status_code=404, detail="None of the material numbers found.")
+
     valid_fields = [field for field in fields if field in df.columns]
     filtered = filtered[valid_fields]
-    
+
     file_id = str(uuid.uuid4())
     filename = f"product_data_{file_id}.xlsx"
     file_path = os.path.join(FILE_DIR, filename)
     filtered.to_excel(file_path, index=False)
-    
+
     return {"message": "file generated", "download_url": f"/download/{filename}"}
 
 @app.get("/download/{filename}")
@@ -194,7 +184,6 @@ async def download_file(filename: str):
 
 @app.get("/me")
 async def read_users_me(current_user: dict = Depends(get_current_user)):
-    # Return user details like username/email
     return {"username": current_user["username"]}
 
 @app.get("/health")

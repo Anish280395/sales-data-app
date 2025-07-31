@@ -172,11 +172,11 @@ async def root():
 async def search_products(q: str = Query(..., min_length=1), current_user: dict = Depends(get_current_user)):
     df = load_product_data()
     terms = [term.strip() for term in q.split(",")]
-    mask = df["material_number"].str.contains('|'.join(terms), case=False)
-    if "article_name" in df.columns:
-        mask |= df["article_name"].str.contains('|'.join(terms), case=False)
-    filtered = df[mask]
-    return filtered.to_dict(orient="records")
+    mask = df["material_number"].str.contains('|'.join(terms), case=False, na=False) | \
+           df["article_name"].str.contains('|'.join(terms), case=False, na=False)
+    filtered = df[mask].fillna("")  
+    results = filtered.to_dict(orient="records")
+    return results
 
 @app.post("/generate")
 async def generate_excel(

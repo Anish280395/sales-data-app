@@ -7,3 +7,4 @@ python-jose
 pydantic[email]
 email-validator
 openpyxl
+bcrypt==4.0.1

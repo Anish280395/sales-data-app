@@ -95,6 +95,10 @@
 <button id="searchBtn">Search Products</button>
 <button id="generateBtn">Generate Excel</button>
 
+<label for="excelFile">Import Excel File:</label>
+<input type="file" id="excelFile" accept=".xlsx,.xls" />
+
+<button id="uploadExcelBtn">Upload & Search</button>
 <div id="message"></div>
 <div id="searchResults"></div>
 
@@ -270,6 +274,53 @@
   generateBtn.addEventListener('click', generateExcel);
   populateFields();
   loadUserInfo();
+
+  const excelFileInput = document.getElementById("excelFile");
+const uploadExcelBtn = document.getElementById("uploadExcelBtn");
+
+uploadExcelBtn.addEventListener("click", async () => {
+  const file = excelFileInput.files[0];
+  if (!file) {
+    messageDiv.textContent = "Please select an Excel file.";
+    return;
+  }
+
+  const token = sessionStorage.getItem("access_token");
+  if (!token) {
+    messageDiv.textContent = "You are not logged in.";
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/import-excel`, {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer " + token,
+      },
+      body: formData,
+    });
+
+    if (!res.ok) {
+      const errData = await res.json();
+      throw new Error(errData.detail || "Upload failed.");
+    }
+
+    const { matched, unmatched } = await res.json();
+
+    messageDiv.innerHTML = `Matched products: ${matched.length}<br>`;
+    if (unmatched.length) {
+      messageDiv.innerHTML += `<strong>Unmatched Material Numbers:</strong> ${unmatched.join(", ")}`;
+    }
+
+    displayProducts(matched);
+  } catch (err) {
+    messageDiv.textContent = "Error: " + err.message;
+  }
+});
+
 </script>
 
 </body>

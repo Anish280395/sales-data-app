@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, status, Query, Body
+from fastapi import FastAPI, Depends, HTTPException, status, Query, Body, File, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
@@ -10,6 +10,7 @@ from typing import List, Optional
 from passlib.context import CryptContext
 from jose import JWTError, jwt
 from datetime import datetime, timedelta
+from io import BytesIO
 import random
 
 app = FastAPI()
@@ -127,12 +128,10 @@ os.makedirs(FILE_DIR, exist_ok=True)
 def load_product_data() -> pd.DataFrame:
     base_dir = os.path.dirname(os.path.abspath(__file__))
     generated_dir = os.path.join(base_dir, "generated_files")
-    os.makedirs(generated_dir, exist_ok=True)  # ✅ Create directory if missing
+    os.makedirs(generated_dir, exist_ok=True)
     csv_path = os.path.join(generated_dir, "product_data_100.csv")
 
     if not os.path.exists(csv_path):
-        # Auto-generate dummy data if file missing
-        import random
         countries = ["Germany", "France", "Italy", "Spain", "Netherlands", "Sweden", "Poland"]
         brands = ["BrandA", "BrandB", "BrandC", "BrandX"]
         dimensions = ["10x5x2", "15x10x5", "20x10x5", "5x5x5"]
@@ -174,7 +173,7 @@ async def search_products(q: str = Query(..., min_length=1), current_user: dict 
     terms = [term.strip() for term in q.split(",")]
     mask = df["material_number"].str.contains('|'.join(terms), case=False, na=False) | \
            df["article_name"].str.contains('|'.join(terms), case=False, na=False)
-    filtered = df[mask].fillna("")  
+    filtered = df[mask].fillna("")
     results = filtered.to_dict(orient="records")
     return results
 
@@ -210,6 +209,34 @@ async def download_file(filename: str):
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="File not found")
     return FileResponse(file_path, media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', filename=filename)
+
+@app.post("/import-excel")
+async def import_excel(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
+    if not file.filename.endswith((".xlsx", ".xls")):
+        raise HTTPException(status_code=400, detail="Only Excel files are supported.")
+
+    contents = await file.read()
+    uploaded_df = pd.read_excel(BytesIO(contents))
+
+    if "material_number" not in uploaded_df.columns:
+        raise HTTPException(status_code=400, detail="Missing 'material_number' column in Excel.")
+
+    uploaded_df["material_number"] = uploaded_df["material_number"].astype(str).str.strip()
+    valid_df = load_product_data()
+    valid_df["material_number"] = valid_df["material_number"].astype(str).str.strip()
+
+    merged = pd.merge(uploaded_df, valid_df, on="material_number", how="left", suffixes=('', '_matched'))
+
+    matched = merged[~merged["article_number"].isna()]
+    unmatched = merged[merged["article_number"].isna()][["material_number"]]
+
+    return {
+        "matched": matched.fillna("").to_dict(orient="records"),
+        "unmatched": unmatched["material_number"].tolist()
+    }
 
 @app.get("/me")
 async def read_users_me(current_user: dict = Depends(get_current_user)):

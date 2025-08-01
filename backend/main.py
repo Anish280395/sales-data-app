@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException, status, Query, Body, File, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, UploadFile, File
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr, validator
@@ -241,6 +241,25 @@ async def import_excel(
 @app.get("/me")
 async def read_users_me(current_user: dict = Depends(get_current_user)):
     return {"username": current_user["username"]}
+
+@app.post("/generate-from-upload")
+async def generate_from_upload(file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
+    df_uploaded = pd.read_excel(BytesIO(await file.read()))
+    if 'material_number' not in df_uploaded.columns:
+        raise HTTPException(status_code=400, detail="Excel must contain 'material_number' column")
+
+    df = load_product_data()
+    uploaded_materials = df_uploaded['material_number'].dropna().astype(str).str.strip().tolist()
+    matched = df[df['material_number'].isin(uploaded_materials)]
+
+    if matched.empty:
+        raise HTTPException(status_code=404, detail="No matching material numbers found.")
+
+    filename = f"product_data_from_upload_{uuid.uuid4()}.xlsx"
+    filepath = os.path.join(FILE_DIR, filename)
+    matched.to_excel(filepath, index=False)
+
+    return {"message": "Excel generated from upload", "download_url": f"/download/{filename}"}
 
 @app.get("/health")
 def health():

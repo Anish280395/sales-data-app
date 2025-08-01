@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException, status, Query, Body, File, UploadFile
-from fastapi.responses import FileResponse, UploadFile, File
+from fastapi.responses import FileResponse
+from fastapi import UploadFile, File
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr, validator
